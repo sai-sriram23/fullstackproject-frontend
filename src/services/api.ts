@@ -59,7 +59,7 @@ export const loginUser = async (user: any) => {
 // ── Save a translation history entry ─────────────────────────────────────────
 // "history" contains: { username, type, sourceText, resultText }
 export const saveHistory = async (history: any) => {
-    // POST /api/history/save — stores the translation in the MySQL database.
+    // POST /api/history/save — stores the translation in the database.
     const response = await api.post('/api/history/save', history);
     return response.data;
 };

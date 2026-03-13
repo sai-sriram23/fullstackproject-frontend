@@ -26,7 +26,7 @@ export const registerUser = async (user: any) => {
         password: user.psw
     };
     const response = await api.post('/api/auth/register', payload);
-    return response.data;
+    return response.data.message;
 };
 export const loginUser = async (user: any) => {
     const payload = {
@@ -34,7 +34,7 @@ export const loginUser = async (user: any) => {
         password: user.psw
     };
     const response = await api.post('/api/auth/login', payload);
-    return response.data;
+    return response.data.message;
 };
 export const saveHistory = async (history: any) => {
     const response = await api.post('/api/history/save', history);

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { languages } from '../constants/languages';
-import { TOPICS, DAILY_THEMES, XP_PER_CORRECT, XP_PER_LESSON_COMPLETE } from '../constants/lessonData';
+import { TOPICS, DAILY_THEMES, XP_PER_CORRECT, XP_PER_LESSON_COMPLETE, DIFFICULTY_LEVELS } from '../constants/lessonData';
 import scenarioEngine from '../services/ScenarioEngine';
+import GlobeSelector from './GlobeSelector';
 
 const MYMEMORY_API = 'https://api.mymemory.translated.net/get';
 const STORAGE_KEY = 'neura_learn_progress';
@@ -107,6 +108,7 @@ const LanguageLearner = () => {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [customTopic, setCustomTopic] = useState('');
     const [generating, setGenerating] = useState(false);
+    const [difficulty, setDifficulty] = useState('beginner');
     
     const recognitionRef = useRef(null);
     const inputRef = useRef(null);
@@ -177,7 +179,7 @@ const LanguageLearner = () => {
     const handleGenerateDynamic = async (topic) => {
         setGenerating(true);
         try {
-            const lesson = await scenarioEngine.generateLesson(topic);
+            const lesson = await scenarioEngine.generateLesson(topic, difficulty);
             const defaultMode = lesson.type === 'dialogue' ? 'translate' : 'quiz';
             startLesson(lesson, defaultMode);
         } catch (error) {
@@ -716,8 +718,31 @@ const LanguageLearner = () => {
                         </select>
                     </div>
                 </div>
+                
+                <div className="pt-8">
+                    <GlobeSelector 
+                        onSelectLanguage={(lang) => setTargetLang(lang)}
+                        currentLanguage={targetLang}
+                    />
+                </div>
 
-                <div className="bg-white dark:bg-slate-800 rounded-[40px] p-8 md:p-12 shadow-xl border border-slate-200 dark:border-slate-700 text-center space-y-8 relative overflow-hidden">
+                    <div className="bg-white dark:bg-slate-800 rounded-[32px] p-6 shadow-xl border border-slate-200 dark:border-slate-700 space-y-4">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Learning Depth (Difficulty)</p>
+                        <div className="grid grid-cols-5 gap-2">
+                            {DIFFICULTY_LEVELS.map(level => (
+                                <button
+                                    key={level.id}
+                                    onClick={() => setDifficulty(level.id)}
+                                    className={`flex flex-col items-center justify-center p-3 rounded-2xl transition-all border-2 ${difficulty === level.id ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-slate-100 dark:bg-slate-900 border-transparent text-slate-500 hover:border-slate-300'}`}
+                                >
+                                    <span className="text-xl mb-1">{level.icon}</span>
+                                    <span className="text-[8px] font-black uppercase text-center leading-tight">{level.label}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="bg-white dark:bg-slate-800 rounded-[40px] p-8 md:p-12 shadow-xl border border-slate-200 dark:border-slate-700 text-center space-y-8 relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-2 h-full bg-blue-600" />
                     <div>
                         <h2 className="text-3xl font-black mb-3">Scenario Explorer</h2>

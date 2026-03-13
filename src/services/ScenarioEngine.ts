@@ -8,66 +8,71 @@ class ScenarioEngine {
    * Generates a lesson based on a topic or today's date.
    * @param topic Optional topic. If not provided, it generates a daily challenge based on today's date.
    */
-  async generateLesson(topic?: string) {
+  async generateLesson(topic?: string, difficulty: string = 'beginner') {
     const isDaily = !topic;
     const finalTopic = topic || this.getDailyTopic();
     
-    // Randomly decide between a vocabulary lesson or a dialogue scenario (60/40 split)
     const useDialogue = Math.random() > 0.6;
 
     if (useDialogue) {
-        return this.generateDialogueLesson(finalTopic, isDaily);
+        return this.generateDialogueLesson(finalTopic, isDaily, difficulty);
     }
 
-    const seedWords = this.getSeedWords(finalTopic);
+    const seedWords = this.getSeedWords(finalTopic, difficulty);
     
-    // Construct lesson items
     const items = [];
-    
-    // Add 5-6 vocabulary items
     const vocabCount = Math.min(6, seedWords.length);
     for (let i = 0; i < vocabCount; i++) {
         items.push({
             word: seedWords[i],
-            hint: `Vocabulary related to ${finalTopic}`
+            hint: `Vocabulary (${difficulty}) related to ${finalTopic}`
         });
     }
 
-    // Add 2-3 contextual phrases
-    const phrases = this.getRandomPhrases(finalTopic, 2);
+    const phrases = this.getRandomPhrases(difficulty, 2);
     phrases.forEach(p => {
         items.push({
             word: p,
-            hint: `Contextual phrase for ${finalTopic}`
+            hint: `Contextual phrase (${difficulty})`
         });
     });
 
     return {
-      title: isDaily ? `Daily Challenge: ${finalTopic}` : `Explore: ${finalTopic}`,
+      title: isDaily ? `${difficulty.toUpperCase()} Challenge: ${finalTopic}` : `${difficulty.toUpperCase()} Explore: ${finalTopic}`,
       icon: isDaily ? '🔥' : '🔍',
       type: 'standard',
+      difficulty,
       items: items.sort(() => Math.random() - 0.5)
     };
   }
 
-  private async generateDialogueLesson(topic: string, isDaily: boolean) {
+  private async generateDialogueLesson(topic: string, isDaily: boolean, difficulty: string) {
     const speakers = ['Alex', 'Jordan', 'Sam', 'Casey'];
     const s1 = speakers[Math.floor(Math.random() * speakers.length)];
     const s2 = speakers.filter(s => s !== s1)[Math.floor(Math.random() * (speakers.length - 1))];
 
-    // Simple dialogue template generation
-    const items = [
+    const templates: Record<string, any[]> = {
+      beginner: [
+        { word: `Hi, is this ${topic.toLowerCase()}?`, hint: `Greeting`, speaker: s1 },
+        { word: `Yes, welcome!`, hint: `Response`, speaker: s2 }
+      ],
+      citizen: [
+        { word: `Pursuant to the local ordinances regarding ${topic.toLowerCase()}, I must inquire about your status.`, hint: `Formal inquiry`, speaker: s1 },
+        { word: `I am fully compliant with the regulatory framework aforementioned.`, hint: `Formal response`, speaker: s2 }
+      ]
+    };
+
+    const items = templates[difficulty] || [
         { word: `Hello ${s2}, how is the ${topic.toLowerCase()} today?`, hint: `${s1} starts the conversation`, speaker: s1 },
-        { word: `It is very busy, but interesting! Do you like ${topic.toLowerCase()}?`, hint: `${s2} responds`, speaker: s2 },
-        { word: `Yes, I think ${topic.toLowerCase()} is the key to the future.`, hint: `${s1} gives an opinion`, speaker: s1 },
-        { word: `That is true. Let us explore more about ${topic.toLowerCase()} together!`, hint: `Closing the dialogue`, speaker: s2 }
+        { word: `It is very busy, but interesting! Do you like ${topic.toLowerCase()}?`, hint: `${s2} responds`, speaker: s2 }
     ];
 
     return {
-        title: isDaily ? `Daily Scenario: ${topic}` : `Conversation: ${topic}`,
+        title: isDaily ? `${difficulty.toUpperCase()} Scenario: ${topic}` : `${difficulty.toUpperCase()} Conversation: ${topic}`,
         icon: '💬',
         type: 'dialogue',
-        items: items
+        difficulty,
+        items
     };
   }
 
@@ -77,15 +82,15 @@ class ScenarioEngine {
     return DAILY_THEMES[dayOfYear % DAILY_THEMES.length];
   }
 
-  private getSeedWords(topic: string): string[] {
-    if (VOCAB_SEEDS[topic]) return [...VOCAB_SEEDS[topic]];
-    const fallback = ["Success", "Progress", "Language", "Learning", "Dynamic", "Future", "Experience", "Challenge"];
+  private getSeedWords(topic: string, difficulty: string): string[] {
+    if (VOCAB_SEEDS[topic] && VOCAB_SEEDS[topic][difficulty]) return [...VOCAB_SEEDS[topic][difficulty]];
+    const fallback = ["Success", "Progress", "Language", "Learning"];
     return fallback.sort(() => Math.random() - 0.5);
   }
 
-  private getRandomPhrases(topic: string, count: number): string[] {
-    const selected = COMMON_PHRASES.sort(() => Math.random() - 0.5).slice(0, count);
-    return selected.map(p => `${p} ${topic.toLowerCase()}.`);
+  private getRandomPhrases(difficulty: string, count: number): string[] {
+    const pool = COMMON_PHRASES[difficulty] || ["Please help."];
+    return pool.sort(() => Math.random() - 0.5).slice(0, count);
   }
 }
 

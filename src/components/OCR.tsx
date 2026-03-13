@@ -14,6 +14,7 @@ import Tesseract from 'tesseract.js';
 // preprocessImageForOCR — enhances the image before OCR (contrast boost, grayscale, threshold).
 // cleanOCRText          — removes OCR noise (random symbols, short garbage tokens).
 import { preprocessImageForOCR, cleanOCRText } from '../utils/imagePreprocessing';
+import { arrangeOCRText } from '../utils/ocrFormatter';
 
 // OcrMode — a TypeScript "type alias" for the two possible mode strings.
 // This is purely for type safety; it doesn't affect runtime behaviour.
@@ -46,6 +47,9 @@ const OCR: React.FC = () => {
 
     // copied — controls the "✅ Copied!" feedback on the copy button.
     const [copied, setCopied] = useState(false);
+
+    // isFormatted — toggle between raw and arranged text.
+    const [isFormatted, setIsFormatted] = useState(false);
 
     // ── Image Upload Handler ────────────────────────────────────────────────────
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -118,6 +122,14 @@ const OCR: React.FC = () => {
             // Always re-enable the button after processing finishes.
             setIsLoading(false);
         }
+    };
+
+    // ── Smart Arrange ──────────────────────────────────────────────────────────
+    const handleSmartArrange = () => {
+        if (!text) return;
+        const arranged = arrangeOCRText(text);
+        setText(arranged);
+        setIsFormatted(true);
     };
 
     // ── Copy to Clipboard ────────────────────────────────────────────────────────
@@ -208,7 +220,19 @@ const OCR: React.FC = () => {
                 <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/5 overflow-hidden animate-in slide-in-from-bottom-4 duration-500">
                     {/* Card header with copy button */}
                     <div className="flex items-center justify-between px-6 py-4 border-b border-emerald-500/10">
-                        <h3 className="font-black text-emerald-600 dark:text-emerald-400">📄 Extracted Text</h3>
+                        <div className="flex items-center gap-3">
+                            <h3 className="font-black text-emerald-600 dark:text-emerald-400">📄 Extracted Text</h3>
+                            <button
+                                onClick={handleSmartArrange}
+                                className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all
+                                    ${isFormatted
+                                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                                        : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
+                                    }`}
+                            >
+                                {isFormatted ? '✨ Arranged' : '✨ Smart Arrange'}
+                            </button>
+                        </div>
                         <button
                             onClick={handleCopy}
                             className="px-4 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors"

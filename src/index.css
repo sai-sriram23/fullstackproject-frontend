@@ -1,25 +1,10 @@
-/* ─────────────────────────────────────────────────────────────────────────────
-   index.css — Global stylesheet loaded by main.tsx for the entire app.
-   ───────────────────────────────────────────────────────────────────────────── */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-/* @import "tailwindcss" loads the full Tailwind CSS framework.
-   Tailwind is a utility-first CSS framework — instead of writing custom CSS,
-   you apply pre-built class names like "font-bold", "text-blue-500", "p-4".
-   In Tailwind v4, this single import replaces all three v3 directives
-   (@tailwind base, @tailwind components, @tailwind utilities). */
-@import "tailwindcss";
-
-/* @custom-variant is a Tailwind v4 directive to define a custom class-based variant.
-   Problem: In Tailwind v4, the "dark:" prefix (e.g., dark:bg-slate-800) is tied to
-   the OS-level media query (prefers-color-scheme: dark) by default.
-   This means toggling a .dark class on <html> from JavaScript does NOTHING by default.
-
-   Fix: This line tells Tailwind — "whenever you see a dark: prefix, apply it when
-   the element OR any of its ancestors has the .dark class."
-   The selector &:where(.dark, .dark *) means:
-     - &         = the element itself with .dark class, OR
-     - .dark *   = any element that is a child of .dark
-   This restores the v3 class-based dark mode behaviour. */
-@custom-variant dark (&:where(.dark, .dark *));
-
-/* Custom styles can go here — any CSS that Tailwind doesn't cover. */
+/* Custom dark mode implementation for class-based toggling */
+@layer base {
+  .dark {
+    color-scheme: dark;
+  }
+}

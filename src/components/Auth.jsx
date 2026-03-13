@@ -16,12 +16,13 @@ const Auth = () => {
                 setMessage(res);
                 if (res === 'Login successful') {
                     localStorage.setItem('username', uname);
-                    navigate('/translator');
+                    window.location.href = '/dashboard';
                 }
             } else {
                 const res = await registerUser({ uname, psw, email });
                 if (res === 'Registered successfully') {
                     localStorage.setItem('username', uname);
+                    window.location.href = '/dashboard';
                 }
                 setMessage(res);
             }

@@ -1,72 +1,59 @@
-import { pipeline, env } from '@xenova/transformers';
-import { lookupPhrase } from './constants/phrasebook';
-env.allowLocalModels = false;
-env.useBrowserCache = true;
-env.useCustomCache = false;
-env.backends.onnx.wasm.numThreads = 1;
-env.backends.onnx.wasm.proxy = false;
-class TranslationPipeline {
-    static task = 'translation';
-    static model = 'Xenova/nllb-200-distilled-600M';
-    static instance: any = null;
-    static async getInstance(progress_callback: any = null) {
-        if (this.instance === null) {
-            console.log('Loading model:', this.model);
-            this.instance = await pipeline(this.task as any, this.model, { 
-                progress_callback,
-                quantized: true, // Force quantization for better mobile performance
-            });
+const MYMEMORY_API = 'https://api.mymemory.translated.net/get';
+
+async function translateText(text: string, srcLang: string, tgtLang: string): Promise<string> {
+    const langPair = `${srcLang}|${tgtLang}`;
+    const lines = text.split('\n');
+    const translatedLines: string[] = [];
+
+    for (const line of lines) {
+        if (!line.trim()) {
+            translatedLines.push(line);
+            continue;
         }
-        return this.instance;
+
+        const segments = splitIntoSegments(line, 450);
+
+        for (const segment of segments) {
+            const url = `${MYMEMORY_API}?q=${encodeURIComponent(segment)}&langpair=${encodeURIComponent(langPair)}`;
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`Translation API error: ${response.status} ${response.statusText}`);
+            }
+            const data = await response.json();
+            if (data.responseStatus === 200) {
+                translatedLines.push(data.responseData.translatedText);
+            } else {
+                throw new Error(data.responseDetails || 'Translation failed');
+            }
+        }
     }
+
+    return translatedLines.join('\n').replace(/\n{3,}/g, '\n\n');
 }
+
+function splitIntoSegments(text: string, maxLen: number): string[] {
+    if (text.length <= maxLen) return [text];
+    const segments: string[] = [];
+    const sentences = text.split(/(?<=[.!?])\s+/);
+    let current = '';
+    for (const sentence of sentences) {
+        if ((current + ' ' + sentence).trim().length > maxLen && current) {
+            segments.push(current.trim());
+            current = sentence;
+        } else {
+            current = current ? current + ' ' + sentence : sentence;
+        }
+    }
+    if (current.trim()) segments.push(current.trim());
+    return segments;
+}
+
 self.addEventListener('message', async (event) => {
     const { text, src_lang, tgt_lang } = event.data;
     try {
-        const translator = await TranslationPipeline.getInstance((x: any) => {
-            self.postMessage(x);
-        });
-        const rawLines = text.split('\n');
-        const chunks: string[] = [];
-        for (const line of rawLines) {
-            if (line.length < 200) {
-                chunks.push(line);
-            } else {
-                const subChunks = line.split(/(?<=[.,!?])\s+/);
-                for (let sub of subChunks) {
-                    while (sub.length > 200) {
-                        chunks.push(sub.substring(0, 200));
-                        sub = sub.substring(200);
-                    }
-                    if (sub) chunks.push(sub);
-                }
-            }
-        }
-        const translatedChunks: string[] = [];
-        for (const chunk of chunks) {
-            if (!chunk.trim()) {
-                translatedChunks.push(chunk);
-                continue;
-            }
-            const phraseHit = lookupPhrase(chunk, src_lang, tgt_lang);
-            if (phraseHit) {
-                translatedChunks.push(phraseHit);
-                continue;
-            }
-            const wordCount = chunk.trim().split(/\s+/).length;
-            const max_new_tokens = Math.min(256, Math.max(32, wordCount * 4));
-            const out = await translator(chunk, {
-                src_lang: src_lang,
-                tgt_lang: tgt_lang,
-                num_beams: 1,
-                length_penalty: 1.0,
-                early_stopping: true,
-                no_repeat_ngram_size: 3,
-                max_new_tokens,
-            });
-            translatedChunks.push(out[0]?.translation_text || '');
-        }
-        const output = [{ translation_text: translatedChunks.join('\n').replace(/\n+/g, '\n') }];
+        self.postMessage({ status: 'initiate' });
+        const translatedText = await translateText(text, src_lang, tgt_lang);
+        const output = [{ translation_text: translatedText }];
         self.postMessage({
             status: 'complete',
             output: output,
@@ -75,4 +62,3 @@ self.addEventListener('message', async (event) => {
         self.postMessage({ status: 'error', error: e?.message || String(e) });
     }
 });
-

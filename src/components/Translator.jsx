@@ -159,7 +159,7 @@ const Translator = () => {
                             <div>
                                 <h4 className="font-bold text-sm mb-1">Local Intelligence</h4>
                                 <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                                    This translation is processed entirely on your device using the NLLB-200 AI model. Your data never leaves your browser.
+                                    This translation is processed entirely on your device using the M2M100 AI model. Your data never leaves your browser.
                                 </p>
                             </div>
                         </div>

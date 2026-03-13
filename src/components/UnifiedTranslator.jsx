@@ -5,8 +5,8 @@ const Translator = () => {
     const [mode, setMode] = useState('text-to-text');
     const [inputText, setInputText] = useState('');
     const [outputText, setOutputText] = useState('');
-    const [srcLang, setSrcLang] = useState('eng_Latn');
-    const [tgtLang, setTgtLang] = useState('fra_Latn');
+    const [srcLang, setSrcLang] = useState('en');
+    const [tgtLang, setTgtLang] = useState('fr');
     const [isLoading, setIsLoading] = useState(false);
     const [progress, setProgress] = useState(null);
     const [isRecording, setIsRecording] = useState(false);
@@ -129,15 +129,15 @@ const Translator = () => {
                 ))}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-[1fr,auto,1fr] items-center gap-4 px-4">
-                <select value={srcLang} onChange={(e) => setSrcLang(e.target.value)}
-                    className="p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer">
-                    {languages.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
-                </select>
-                <div className="w-10 h-10 bg-blue-500/10 rounded-full flex items-center justify-center text-blue-500 font-bold">→</div>
-                <select value={tgtLang} onChange={(e) => setTgtLang(e.target.value)}
-                    className="p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer">
-                    {languages.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
-                </select>
+                    <select value={srcLang} onChange={(e) => setSrcLang(e.target.value)}
+                        className="p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer">
+                        {languages.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
+                    </select>
+                    <div className="w-10 h-10 bg-blue-500/10 rounded-full flex items-center justify-center text-blue-500 font-bold">→</div>
+                    <select value={tgtLang} onChange={(e) => setTgtLang(e.target.value)}
+                        className="p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer">
+                        {languages.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
+                    </select>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="space-y-4">

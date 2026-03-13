@@ -8,7 +8,7 @@ const CameraTranslator = () => {
     const [image, setImage] = useState(null);
     const [ocrText, setOcrText] = useState('');
     const [translatedText, setTranslatedText] = useState('');
-    const [tgtLang, setTgtLang] = useState('fra_Latn');
+    const [tgtLang, setTgtLang] = useState('fr');
     const [ocrProgress, setOcrProgress] = useState(0);
     const [transProgress, setTransProgress] = useState(null);
     const [status, setStatus] = useState('');
@@ -133,7 +133,7 @@ const CameraTranslator = () => {
                 return;
             }
             setStatus('Translating…');
-            worker.current?.postMessage({ text, src_lang: 'eng_Latn', tgt_lang: tgtLang });
+            worker.current?.postMessage({ text, src_lang: 'en', tgt_lang: tgtLang });
         } catch (err) {
             setStatus('Error: ' + err);
             setIsLoading(false);

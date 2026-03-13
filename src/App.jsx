@@ -6,6 +6,7 @@ import Translator from './components/UnifiedTranslator';
 import OCR from './components/OCR';
 import Models from './components/ModelManager';
 import CameraTranslator from './components/CameraTranslator';
+import LanguageLearner from './components/LanguageLearner';
 import Home from './components/Home';
 import Layout from './components/Layout';
 import { Analytics } from '@vercel/analytics/react';
@@ -27,6 +28,7 @@ const App = () => {
           <Route path="ocr" element={<OCR />} />
           <Route path="camera" element={<CameraTranslator />} />
           <Route path="models" element={<Models />} />
+          <Route path="learn" element={<LanguageLearner />} />
         </Route>
       </Routes>
     </Router>

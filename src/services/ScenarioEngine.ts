@@ -16,10 +16,15 @@ class ScenarioEngine {
     const items = [];
     const vocabCount = Math.min(6, seedWords.length);
     for (let i = 0; i < vocabCount; i++) {
+        const seed = seedWords[i];
+        const wordStr = typeof seed === 'string' ? seed : seed.word;
+        const icon = typeof seed === 'string' ? null : seed.icon;
+        
         items.push({
-            word: seedWords[i],
+            word: wordStr,
+            icon: icon,
             hint: `Concept (${difficulty}): ${finalSkill}`,
-            tokens: this.tokenize(seedWords[i])
+            tokens: this.tokenize(wordStr)
         });
     }
 
@@ -27,6 +32,7 @@ class ScenarioEngine {
     phrases.forEach(p => {
         items.push({
             word: p,
+            icon: '💬',
             hint: `Common usage`,
             tokens: this.tokenize(p)
         });
@@ -46,14 +52,28 @@ class ScenarioEngine {
   }
 
   public getLearningPath() {
-    // A hierarchical Skill Tree structure
+    // A much longer, tiered Skill Tree structure leading to "Mastery"
     return [
       { id: 1, title: 'Basics 1', icon: '🥚', topic: 'Basics 1', difficulty: 'beginner' },
       { id: 2, title: 'Food & Drink', icon: '🍎', topic: 'Food & Drink', difficulty: 'beginner' },
       { id: 3, title: 'Animals', icon: '🐱', topic: 'Animals', difficulty: 'beginner' },
-      { id: 4, title: 'Basics 2', icon: '📖', topic: 'Basics 1', difficulty: 'intermediate' },
+      { id: 4, title: 'Basics 2', icon: '📖', topic: 'Basics 1', difficulty: 'beginner' },
       { id: 5, title: 'Family', icon: '👨‍👩‍👧', topic: 'Family', difficulty: 'beginner' },
-      { id: 6, title: 'Verbs', icon: '🏃', topic: 'Verbs: Present', difficulty: 'beginner' },
+      { id: 6, title: 'Pres. Verbs', icon: '🏃', topic: 'Verbs: Present', difficulty: 'beginner' },
+      { id: 7, title: 'Nature', icon: '🌲', topic: 'Nature', difficulty: 'beginner' },
+      { id: 8, title: 'Clothing', icon: '👕', topic: 'Clothing', difficulty: 'beginner' },
+      // Tier 2: Intermediate
+      { id: 9, title: 'Education', icon: '🎓', topic: 'Education', difficulty: 'intermediate' },
+      { id: 10, title: 'Health', icon: '🏥', topic: 'Health', difficulty: 'intermediate' },
+      { id: 11, title: 'Hobbies', icon: '🎨', topic: 'Hobbies', difficulty: 'intermediate' },
+      { id: 12, title: 'Travel 1', icon: '✈️', topic: 'Travel 1', difficulty: 'intermediate' },
+      { id: 13, title: 'Occupations', icon: '💼', topic: 'Occupations', difficulty: 'intermediate' },
+      // Tier 3: Advanced
+      { id: 14, title: 'Politics', icon: '⚖️', topic: 'Politics', difficulty: 'advanced' },
+      { id: 15, title: 'Technology', icon: '💻', topic: 'Technology', difficulty: 'advanced' },
+      { id: 16, title: 'Philosophy', icon: '🧠', topic: 'Philosophy', difficulty: 'advanced' },
+      { id: 17, title: 'Business', icon: '💹', topic: 'Business', difficulty: 'advanced' },
+      { id: 18, title: 'The End', icon: '🏆', topic: 'Science', difficulty: 'advanced' }, // Mastery Node
     ];
   }
 
@@ -63,8 +83,8 @@ class ScenarioEngine {
     return SKILLS[dayOfYear % SKILLS.length];
   }
 
-  private getSeedWords(skill: string, difficulty: string): string[] {
-    if (VOCAB_SEEDS[skill] && VOCAB_SEEDS[skill][difficulty]) return [...VOCAB_SEEDS[skill][difficulty]];
+  private getSeedWords(skill: string, difficulty: string): (string | { word: string, icon: string })[] {
+    if (VOCAB_SEEDS[skill] && VOCAB_SEEDS[skill][difficulty]) return [...(VOCAB_SEEDS[skill][difficulty] as any[])];
     // Fallback if the skill isn't in VOCAB_SEEDS (some NEW SKILLS might not have seeds yet)
     return ["Learn", "Practice", "Improve", "Master"].sort(() => Math.random() - 0.5);
   }

@@ -30,10 +30,7 @@ const getProgress = () => {
         completedLessons: [], 
         timeToday: 0, 
         hearts: 5,
-        gems: 100, // Initial gems
         targetLang: 'fr',
-        streakFreezes: 0,
-        league: 'Bronze',
         lastActiveDate: new Date().toDateString() 
     };
 };
@@ -129,9 +126,6 @@ const LanguageLearner = () => {
     const [matchPairs, setMatchPairs] = useState([]);
     const [selectedMatch, setSelectedMatch] = useState(null);
     const [matchedIds, setMatchedIds] = useState([]);
-    const [gems, setGems] = useState(progress.gems || 100);
-    const [streakFreezes, setStreakFreezes] = useState(progress.streakFreezes || 0);
-    const [activeLeague, setActiveLeague] = useState(progress.league || 'Bronze');
     
     const recognitionRef = useRef(null);
     const inputRef = useRef(null);
@@ -274,6 +268,11 @@ const LanguageLearner = () => {
         }
     }, [loadTranslations]);
 
+    // Load or generate initial lesson path
+    useEffect(() => {
+        setUnitPath(scenarioEngine.getLearningPath());
+    }, [targetLang]);
+
     const generateQuizOptions = (item, trans, allItems) => {
         const correct = trans[item.word] || '...';
         const others = allItems
@@ -286,14 +285,11 @@ const LanguageLearner = () => {
     };
 
     const awardXP = (amount) => {
-        const gemReward = Math.floor(amount / 10);
         setSessionXP(prev => prev + amount);
-        setGems(prev => prev + gemReward);
         setProgress(prev => {
             const updated = updateStreak({ 
                 ...prev, 
-                xp: prev.xp + amount, 
-                gems: (prev.gems || 0) + gemReward 
+                xp: prev.xp + amount
             });
             saveProgress(updated);
             return updated;
@@ -316,20 +312,31 @@ const LanguageLearner = () => {
         }
     };
 
-    const nextItem = () => {
+    const nextItem = (id) => {
         if (!activeLesson) return;
-        const next = currentIdx + 1;
+        const next = id !== undefined ? id : currentIdx + 1;
         if (next >= activeLesson.items.length) {
             awardXP(XP_PER_LESSON_COMPLETE);
+            
+            // Check if this was the last unit in the path
+            const isLastUnit = activeLesson.title.toLowerCase().includes('the end');
+            
             setProgress(prev => {
-                const lessonKey = `${activeLesson.title}_${targetLang}`;
-                const completed = (prev.completedLessons || []).includes(lessonKey)
-                    ? prev.completedLessons
-                    : [...(prev.completedLessons || []), lessonKey];
-                const updated = { ...prev, completedLessons: completed };
+                const updated = { 
+                    ...prev, 
+                    xp: prev.xp + XP_PER_LESSON_COMPLETE,
+                    completedLessons: [...(prev.completedLessons || []), `${activeLesson.title}_${targetLang}`]
+                };
                 saveProgress(updated);
                 return updated;
             });
+
+            if (isLastUnit) {
+                // Course completion!
+                awardXP(500); // Massive bonus
+                setView('course-complete');
+                return;
+            }
             setView('complete');
             return;
         }
@@ -337,6 +344,8 @@ const LanguageLearner = () => {
         setFlipped(false);
         setUserInput('');
         setFeedback(null);
+        setSelectedWords([]);
+        
         if (activeMode === 'quiz' && activeLesson.type !== 'dialogue') {
             generateQuizOptions(activeLesson.items[next], translations, activeLesson.items);
         }
@@ -441,14 +450,10 @@ const LanguageLearner = () => {
                     Unit Mastered!
                 </h1>
 
-                <div className="grid grid-cols-2 gap-4 mb-10">
-                    <div className="bg-white dark:bg-slate-800 rounded-[32px] p-8 shadow-2xl border border-slate-100 dark:border-slate-700 animate-in slide-in-from-left duration-700">
+                <div className="flex justify-center mb-10">
+                    <div className="bg-white dark:bg-slate-800 rounded-[32px] p-8 shadow-2xl border border-slate-100 dark:border-slate-700 animate-in slide-in-from-left duration-700 w-full max-w-xs">
                         <p className="text-4xl font-black text-blue-600">+{sessionXP}</p>
                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-2">XP Earned</p>
-                    </div>
-                    <div className="bg-white dark:bg-slate-800 rounded-[32px] p-8 shadow-2xl border border-slate-100 dark:border-slate-700 animate-in slide-in-from-right duration-700">
-                        <p className="text-4xl font-black text-blue-400">+{Math.floor(sessionXP / 10)}</p>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-2">Gems Looted</p>
                     </div>
                 </div>
 
@@ -495,7 +500,7 @@ const LanguageLearner = () => {
                             <span>❤️</span> {hearts}
                         </div>
                         <div className="flex items-center gap-1 text-blue-500 font-black">
-                            <span>💎</span> {sessionXP}
+                            <span>🔥</span> {sessionXP}
                         </div>
                     </div>
                 </div>
@@ -631,9 +636,10 @@ const LanguageLearner = () => {
                             </div>
                         ) : activeMode === 'translate' ? (
                             <div className="flex flex-col items-center w-full">
-                                <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-[32px] shadow-2xl border border-slate-100 dark:border-slate-700 p-8 mb-6">
+                                <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-[32px] shadow-2xl border border-slate-100 dark:border-slate-700 p-8 mb-6 text-center">
                                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Translate this</p>
-                                    <p className="text-2xl font-black">{item.word}</p>
+                                    {item.icon && <div className="text-6xl mb-4">{item.icon}</div>}
+                                    <p className="text-3xl font-black">{item.word}</p>
                                 </div>
                                 <div className="w-full max-w-md">
                                     <input ref={inputRef} type="text" value={userInput}
@@ -744,7 +750,8 @@ const LanguageLearner = () => {
                             <div className="flex flex-col items-center w-full">
                                 <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-[32px] shadow-2xl border border-slate-100 dark:border-slate-700 p-8 mb-6 text-center">
                                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">What is the translation of</p>
-                                    <p className="text-2xl font-black">{item.word}</p>
+                                    {item.icon && <div className="text-6xl mb-4">{item.icon}</div>}
+                                    <p className="text-3xl font-black">{item.word}</p>
                                 </div>
                                 <div className="w-full max-w-md grid grid-cols-1 gap-3">
                                     {quizOptions.map((opt, i) => {
@@ -849,12 +856,8 @@ const LanguageLearner = () => {
                             <span className="font-black text-orange-500">{streakCount}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="text-2xl text-blue-500">💎</span>
-                            <span className="font-black text-blue-500">{progress.xp}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-2xl text-red-500">❤️</span>
-                            <span className="font-black text-red-500">{hearts}</span>
+                            <span className="text-2xl text-blue-500">✨</span>
+                            <span className="font-black text-blue-500">{progress.xp} XP</span>
                         </div>
                     </div>
                     <div className="flex gap-2">
@@ -943,153 +946,34 @@ const LanguageLearner = () => {
                     </div>
                 </div>
 
-                {/* Duolingo Navbar */}
-                <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t-2 border-slate-100 dark:border-slate-800 p-4 z-50">
-                    <div className="max-w-md mx-auto flex justify-between px-6">
-                        <button onClick={() => setView('home')} className={`flex flex-col items-center gap-1 ${view === 'home' ? 'text-blue-500' : 'text-slate-400'}`}>
-                            <span className="text-2xl">🏚️</span>
-                            <span className="text-[10px] font-black uppercase">Learn</span>
-                        </button>
-                        <button onClick={() => setView('league')} className={`flex flex-col items-center gap-1 ${view === 'league' ? 'text-blue-500' : 'text-slate-400'}`}>
-                            <span className="text-2xl">🏆</span>
-                            <span className="text-[10px] font-black uppercase">Leagues</span>
-                        </button>
-                        <button onClick={() => setView('shop')} className={`flex flex-col items-center gap-1 ${view === 'shop' ? 'text-blue-500' : 'text-slate-400'}`}>
-                            <span className="text-2xl">🛒</span>
-                            <span className="text-[10px] font-black uppercase">Shop</span>
-                        </button>
-                    </div>
-                </div>
             </div>
         );
     }
 
-    if (view === 'shop') {
-        const items = [
-            { id: 'heart', name: 'Refill Hearts', desc: 'Get back to 5 hearts', price: 50, icon: '❤️' },
-            { id: 'freeze', name: 'Streak Freeze', desc: 'Keep your streak if you miss a day', price: 200, icon: '❄️' },
-            { id: 'bonus', name: 'Bonus Unit', desc: 'Unlock a specialized secret unit', price: 500, icon: '🗝️' },
-        ];
-
-        const buyItem = (item) => {
-            if (gems < item.price) return;
-            setGems(prev => prev - item.price);
-            if (item.id === 'heart') setHearts(5);
-            if (item.id === 'freeze') setStreakFreezes(prev => prev + 1);
-            
-            setProgress(prev => {
-                const updated = { ...prev, gems: prev.gems - item.price, hearts: item.id === 'heart' ? 5 : prev.hearts, streakFreezes: item.id === 'freeze' ? (prev.streakFreezes || 0) + 1 : prev.streakFreezes };
-                saveProgress(updated);
-                return updated;
-            });
-        };
-
+    if (view === 'course-complete') {
         return (
-            <div className="max-w-4xl mx-auto px-4 py-8 space-y-8 animate-in fade-in duration-700 pb-32">
-                <div className="text-center space-y-2">
-                    <h1 className="text-4xl font-black tracking-tight text-blue-600">Shop</h1>
-                    <p className="text-slate-500 font-bold">Spend your hard-earned gems on power-ups!</p>
+            <div className="flex flex-col items-center justify-center min-h-screen space-y-8 p-10 text-center animate-in zoom-in duration-700 bg-white dark:bg-slate-900">
+                <div className="w-64 h-64 bg-yellow-400 rounded-full flex items-center justify-center text-[100px] shadow-2xl relative">
+                    🏆
+                    <div className="absolute inset-0 rounded-full animate-ping bg-yellow-400/50" />
                 </div>
-
-                <div className="flex items-center justify-center gap-2 bg-blue-500/10 p-4 rounded-3xl border border-blue-500/20 w-fit mx-auto">
-                    <span className="text-2xl">💎</span>
-                    <span className="text-xl font-black text-blue-600">{gems} Gems</span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {items.map(item => (
-                        <div key={item.id} className="bg-white dark:bg-slate-800 p-8 rounded-[32px] shadow-xl border border-slate-100 dark:border-slate-700 flex flex-col items-center text-center space-y-4">
-                            <span className="text-5xl">{item.icon}</span>
-                            <div>
-                                <h3 className="text-xl font-black">{item.name}</h3>
-                                <p className="text-sm text-slate-500 mt-2">{item.desc}</p>
-                            </div>
-                            <button 
-                                onClick={() => buyItem(item)}
-                                disabled={gems < item.price}
-                                className={`w-full py-4 rounded-2xl font-black shadow-lg transition-all ${gems >= item.price ? 'bg-blue-600 text-white hover:scale-105 active:scale-95' : 'bg-slate-100 text-slate-400 opacity-50'}`}
-                            >
-                                💎 {item.price}
-                            </button>
+                <div className="space-y-4">
+                    <h1 className="text-5xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">Course Complete!</h1>
+                    <p className="text-xl text-slate-500 font-bold">You've mastered {languages.find(l => l.code === targetLang)?.name}!</p>
+                    <div className="flex gap-4 justify-center">
+                        <div className="p-8 bg-blue-500 rounded-3xl text-white shadow-xl w-48">
+                            <p className="text-[10px] font-black uppercase opacity-60">Mastery XP</p>
+                            <p className="text-3xl font-black">+500</p>
                         </div>
-                    ))}
-                </div>
-
-                {/* Duolingo Navbar */}
-                <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t-2 border-slate-100 dark:border-slate-800 p-4 z-50">
-                    <div className="max-w-md mx-auto flex justify-between px-6">
-                        <button onClick={() => setView('home')} className={`flex flex-col items-center gap-1 ${view === 'home' ? 'text-blue-500' : 'text-slate-400'}`}>
-                            <span className="text-2xl">🏚️</span>
-                            <span className="text-[10px] font-black uppercase">Learn</span>
-                        </button>
-                        <button onClick={() => setView('league')} className={`flex flex-col items-center gap-1 ${view === 'league' ? 'text-blue-500' : 'text-slate-400'}`}>
-                            <span className="text-2xl">🏆</span>
-                            <span className="text-[10px] font-black uppercase">Leagues</span>
-                        </button>
-                        <button onClick={() => setView('shop')} className={`flex flex-col items-center gap-1 ${view === 'shop' ? 'text-blue-500' : 'text-slate-400'}`}>
-                            <span className="text-2xl">🛒</span>
-                            <span className="text-[10px] font-black uppercase">Shop</span>
-                        </button>
                     </div>
                 </div>
+                <button onClick={() => setView('home')} className="px-12 py-5 bg-blue-600 text-white rounded-full font-black shadow-2xl hover:scale-105 active:scale-95 transition-all outline-none">
+                    Back to Skills →
+                </button>
             </div>
         );
     }
 
-    if (view === 'league') {
-        const competitors = [
-            { name: 'Alex', xp: 1250, avatar: '👤' },
-            { name: 'You', xp: progress.xp, avatar: '🧠', isUser: true },
-            { name: 'Sam', xp: 840, avatar: '👤' },
-            { name: 'Jordan', xp: 620, avatar: '👤' },
-            { name: 'Casey', xp: 450, avatar: '👤' },
-        ].sort((a,b) => b.xp - a.xp);
-
-        return (
-            <div className="max-w-4xl mx-auto px-4 py-8 space-y-8 animate-in fade-in duration-700 pb-32">
-                <div className="text-center space-y-2">
-                    <h1 className="text-4xl font-black tracking-tight text-orange-500">{activeLeague} League</h1>
-                    <p className="text-slate-500 font-bold">Top 3 advance to the next league!</p>
-                </div>
-
-                <div className="bg-white dark:bg-slate-800 rounded-[40px] shadow-2xl overflow-hidden border border-slate-100 dark:border-slate-700">
-                    {competitors.map((c, i) => (
-                        <div key={i} className={`flex items-center gap-6 p-6 border-b border-slate-50 dark:border-slate-800 transition-all ${c.isUser ? 'bg-blue-500/5' : ''}`}>
-                            <span className={`text-xl font-black w-8 ${i < 3 ? 'text-orange-500' : 'text-slate-400'}`}>{i + 1}</span>
-                            <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-900 flex items-center justify-center text-2xl shadow-inner border-2 border-white dark:border-slate-800">
-                                {c.avatar}
-                            </div>
-                            <div className="flex-1">
-                                <p className={`font-black ${c.isUser ? 'text-blue-600' : ''}`}>{c.name}</p>
-                                {i < 3 && <p className="text-[10px] font-black uppercase tracking-widest text-orange-400">Promotion Zone</p>}
-                            </div>
-                            <div className="text-right">
-                                <p className="font-black text-slate-700 dark:text-slate-200">{c.xp} XP</p>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-
-                {/* Duolingo Navbar */}
-                <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t-2 border-slate-100 dark:border-slate-800 p-4 z-50">
-                    <div className="max-w-md mx-auto flex justify-between px-6">
-                        <button onClick={() => setView('home')} className={`flex flex-col items-center gap-1 ${view === 'home' ? 'text-blue-500' : 'text-slate-400'}`}>
-                            <span className="text-2xl">🏚️</span>
-                            <span className="text-[10px] font-black uppercase">Learn</span>
-                        </button>
-                        <button onClick={() => setView('league')} className={`flex flex-col items-center gap-1 ${view === 'league' ? 'text-blue-500' : 'text-slate-400'}`}>
-                            <span className="text-2xl">🏆</span>
-                            <span className="text-[10px] font-black uppercase">Leagues</span>
-                        </button>
-                        <button onClick={() => setView('shop')} className={`flex flex-col items-center gap-1 ${view === 'shop' ? 'text-blue-500' : 'text-slate-400'}`}>
-                            <span className="text-2xl">🛒</span>
-                            <span className="text-[10px] font-black uppercase">Shop</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
-    }
 
     // Default view if none of the above conditions are met (e.g., 'dashboard' view)
     return null;

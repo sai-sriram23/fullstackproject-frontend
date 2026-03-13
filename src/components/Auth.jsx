@@ -100,6 +100,10 @@ const Auth = () => {
                         </button>
                     </p>
                 </div>
+                {/* Debug Footer */}
+                <div className="mt-4 p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg text-[10px] text-slate-400 font-mono text-center">
+                    API Endpoint: {import.meta.env.VITE_API_URL || 'http://localhost:8081'}
+                </div>
             </div>
         </div>
     );

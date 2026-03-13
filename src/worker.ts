@@ -58,7 +58,7 @@ self.addEventListener('message', async (event) => {
             const out = await translator(chunk, {
                 src_lang: src_lang,
                 tgt_lang: tgt_lang,
-                num_beams: 10,
+                num_beams: 1,
                 length_penalty: 1.0,
                 early_stopping: true,
                 no_repeat_ngram_size: 3,

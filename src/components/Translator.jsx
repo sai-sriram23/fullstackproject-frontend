@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { saveHistory } from '../services/api';
-import { languages } from '../constants/languages';
+import culturalEngine from '../services/CulturalEngine';
+
 const Translator = () => {
     const [inputText, setInputText] = useState('');
     const [outputText, setOutputText] = useState('');
@@ -8,6 +9,8 @@ const Translator = () => {
     const [tgtLang, setTgtLang] = useState('fra_Latn');
     const [isLoading, setIsLoading] = useState(false);
     const [progress, setProgress] = useState(null);
+    const [culturalTips, setCulturalTips] = useState([]);
+    const [toneAnalysis, setToneAnalysis] = useState('');
     const worker = useRef(null);
     const inputTextRef = useRef('');
     useEffect(() => {
@@ -29,6 +32,8 @@ const Translator = () => {
                 setIsLoading(false);
                 const translated = output[0].translation_text;
                 setOutputText(translated);
+                setCulturalTips(culturalEngine.getTips(tgtLang));
+                setToneAnalysis(culturalEngine.analyzeTone(translated));
                 setProgress(null);
                 const username = localStorage.getItem('username') || 'anonymous';
                 saveHistory({
@@ -153,15 +158,38 @@ const Translator = () => {
                             </div>
                         )}
                     </div>
-                    <div className="p-6 bg-blue-500/5 border border-blue-500/10 rounded-3xl">
-                        <div className="flex items-start gap-4">
-                            <div className="p-3 bg-blue-500/10 rounded-xl text-blue-500">💡</div>
-                            <div>
-                                <h4 className="font-bold text-sm mb-1">Local Intelligence</h4>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                                    This translation is processed entirely on your device using the M2M100 AI model. Your data never leaves your browser.
-                                </p>
-                            </div>
+                    
+                    {/* Cultural Compass Panel */}
+                    <div className="space-y-4 animate-in slide-in-from-right-4 duration-700">
+                        <div className="flex items-center justify-between px-2">
+                            <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Cultural Compass</h3>
+                            {toneAnalysis && (
+                                <span className="px-3 py-1 bg-blue-500/10 text-blue-500 text-[10px] font-black rounded-full uppercase border border-blue-500/20">
+                                    Tone: {toneAnalysis}
+                                </span>
+                            )}
+                        </div>
+                        
+                        <div className="grid grid-cols-1 gap-3">
+                            {culturalTips.length > 0 ? (
+                                culturalTips.map((tip, i) => (
+                                    <div key={i} className="group p-5 bg-white dark:bg-slate-800 rounded-[24px] border border-slate-100 dark:border-slate-700 shadow-lg hover:border-blue-500/30 transition-all">
+                                        <div className="flex items-start gap-4">
+                                            <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center text-xl group-hover:scale-110 transition-transform">🧭</div>
+                                            <div>
+                                                <h4 className="font-black text-sm mb-1">{tip.title}</h4>
+                                                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+                                                    {tip.advice}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="p-8 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[32px] text-center opacity-40">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Insights will appear after translation</p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

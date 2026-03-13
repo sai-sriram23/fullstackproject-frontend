@@ -15,6 +15,7 @@ const Layout = () => {
         { path: '/ocr', label: 'OCR', icon: '📄' },
         { path: '/models', label: 'Models', icon: '💾' },
         { path: '/learn', label: 'Learn', icon: '🎓' },
+        { path: '/memory', label: 'Memory', icon: '🧠' },
     ];
     return (
         <div className="flex h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-500 font-sans">

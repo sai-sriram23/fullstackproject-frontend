@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { languages } from '../constants/languages';
 import { TOPICS, DAILY_THEMES, XP_PER_CORRECT, XP_PER_LESSON_COMPLETE, DIFFICULTY_LEVELS } from '../constants/lessonData';
 import scenarioEngine from '../services/ScenarioEngine';
+import phoneticEngine, { getPhoneticHint, getDifferenceHeatmap } from '../services/PhoneticEngine';
 import GlobeSelector from './GlobeSelector';
+import MascotImg from '../assets/neura_mascot.png';
 
 const MYMEMORY_API = 'https://api.mymemory.translated.net/get';
 const STORAGE_KEY = 'neura_learn_progress';
@@ -22,7 +24,18 @@ const getProgress = () => {
             return parsed;
         }
     } catch {}
-    return { xp: 0, activeDates: [], completedLessons: [], timeToday: 0, lastActiveDate: new Date().toDateString() };
+    return { 
+        xp: 0, 
+        activeDates: [], 
+        completedLessons: [], 
+        timeToday: 0, 
+        hearts: 5,
+        gems: 100, // Initial gems
+        targetLang: 'fr',
+        streakFreezes: 0,
+        league: 'Bronze',
+        lastActiveDate: new Date().toDateString() 
+    };
 };
 
 const saveProgress = (progress) => {
@@ -91,7 +104,7 @@ const speak = (text, langCode) => {
 const LanguageLearner = () => {
     const [progress, setProgress] = useState(getProgress);
     const [nativeLang, setNativeLang] = useState('en');
-    const [targetLang, setTargetLang] = useState('fr');
+    const [targetLang, setTargetLang] = useState(progress.targetLang || 'fr');
     const [view, setView] = useState('home');
     const [activeMode, setActiveMode] = useState(null);
     const [activeLesson, setActiveLesson] = useState(null);
@@ -109,6 +122,16 @@ const LanguageLearner = () => {
     const [customTopic, setCustomTopic] = useState('');
     const [generating, setGenerating] = useState(false);
     const [difficulty, setDifficulty] = useState('beginner');
+    const [hearts, setHearts] = useState(progress.hearts || 5);
+    const [selectedWords, setSelectedWords] = useState([]);
+    const [wordPool, setWordPool] = useState([]);
+    const [unitPath, setUnitPath] = useState(scenarioEngine.getLearningPath());
+    const [matchPairs, setMatchPairs] = useState([]);
+    const [selectedMatch, setSelectedMatch] = useState(null);
+    const [matchedIds, setMatchedIds] = useState([]);
+    const [gems, setGems] = useState(progress.gems || 100);
+    const [streakFreezes, setStreakFreezes] = useState(progress.streakFreezes || 0);
+    const [activeLeague, setActiveLeague] = useState(progress.league || 'Bronze');
     
     const recognitionRef = useRef(null);
     const inputRef = useRef(null);
@@ -133,6 +156,15 @@ const LanguageLearner = () => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => clearInterval(timer);
     }, []);
+
+    // Persist target language changes
+    useEffect(() => {
+        setProgress(prev => {
+            const updated = { ...prev, targetLang };
+            saveProgress(updated);
+            return updated;
+        });
+    }, [targetLang]);
 
     const streakCount = getStreakCount(progress.activeDates);
     const timeInMins = Math.floor((progress.timeToday || 0) / 60);
@@ -166,9 +198,16 @@ const LanguageLearner = () => {
         const t = {};
         for (const item of lesson.items) {
             try {
-                t[item.word] = await translateWord(item.word, nativeLang, targetLang);
-            } catch {
-                t[item.word] = '...';
+                // Ensure we don't translate if languages are the same
+                if (nativeLang === targetLang) {
+                    t[item.word] = item.word;
+                } else {
+                    const translated = await translateWord(item.word, nativeLang, targetLang);
+                    t[item.word] = translated;
+                }
+            } catch (err) {
+                console.error('Translation error:', err);
+                t[item.word] = item.word + ' (T)'; // Fallback to source with indicator
             }
         }
         setTranslations(t);
@@ -177,6 +216,10 @@ const LanguageLearner = () => {
     }, [nativeLang, targetLang]);
 
     const handleGenerateDynamic = async (topic) => {
+        if (hearts <= 0) {
+            setView('out-of-hearts');
+            return;
+        }
         setGenerating(true);
         try {
             const lesson = await scenarioEngine.generateLesson(topic, difficulty);
@@ -198,7 +241,35 @@ const LanguageLearner = () => {
         setSessionXP(0);
         setView('exercise');
         const t = await loadTranslations(lesson);
-        if (mode === 'quiz' && lesson.type !== 'dialogue') {
+        
+        if (lesson.type === 'match' || mode === 'match') {
+            const pairs = [];
+            lesson.items.forEach((item, idx) => {
+                pairs.push({ id: `src-${idx}`, text: item.word, pairId: idx, type: 'src' });
+                pairs.push({ id: `tgt-${idx}`, text: t[item.word], pairId: idx, type: 'tgt' });
+            });
+            setMatchPairs(pairs.sort(() => Math.random() - 0.5));
+            setMatchedIds([]);
+            setSelectedMatch(null);
+        }
+
+        if (lesson.type === 'wordbank' || mode === 'wordbank') {
+            const currentItem = lesson.items[0];
+            const correct = t[currentItem.word] || '';
+            const tokens = correct.split(' ').filter(w => w.length > 0);
+            
+            // Use other translated words from the lesson as distractors instead of hardcoded English
+            const otherTranslations = Object.values(t).filter(val => val !== correct);
+            const distractors = otherTranslations.length > 0 
+                ? otherTranslations.sort(() => Math.random() - 0.5).slice(0, 3)
+                : ['the', 'is', 'a'].filter(d => !tokens.includes(d)); // Ultimate fallback
+            
+            const pool = [...tokens, ...distractors].sort(() => Math.random() - 0.5);
+            setWordPool(pool);
+            setSelectedWords([]);
+        }
+
+        if (mode === 'quiz') {
             generateQuizOptions(lesson.items[0], t, lesson.items);
         }
     }, [loadTranslations]);
@@ -215,9 +286,15 @@ const LanguageLearner = () => {
     };
 
     const awardXP = (amount) => {
+        const gemReward = Math.floor(amount / 10);
         setSessionXP(prev => prev + amount);
+        setGems(prev => prev + gemReward);
         setProgress(prev => {
-            const updated = updateStreak({ ...prev, xp: prev.xp + amount });
+            const updated = updateStreak({ 
+                ...prev, 
+                xp: prev.xp + amount, 
+                gems: (prev.gems || 0) + gemReward 
+            });
             saveProgress(updated);
             return updated;
         });
@@ -234,6 +311,7 @@ const LanguageLearner = () => {
             setShowCelebration(true);
             setTimeout(() => setShowCelebration(false), 1200);
         } else {
+            setHearts(prev => Math.max(0, prev - 1));
             setFeedback({ correct: false, expected: correct });
         }
     };
@@ -262,7 +340,39 @@ const LanguageLearner = () => {
         if (activeMode === 'quiz' && activeLesson.type !== 'dialogue') {
             generateQuizOptions(activeLesson.items[next], translations, activeLesson.items);
         }
+
+        if (activeLesson.type === 'wordbank' || activeMode === 'wordbank') {
+            const nextItem = activeLesson.items[next];
+            const correct = translations[nextItem.word] || '';
+            const tokens = correct.split(' ').filter(w => w.length > 0);
+            
+            const otherTranslations = Object.values(translations).filter(val => val !== correct);
+            const distractors = otherTranslations.length > 0 
+                ? otherTranslations.sort(() => Math.random() - 0.5).slice(0, 3)
+                : ['the', 'is', 'a'].filter(d => !tokens.includes(d));
+
+            const pool = [...tokens, ...distractors].sort(() => Math.random() - 0.5);
+            setWordPool(pool);
+            setSelectedWords([]);
+        }
+
         setTimeout(() => inputRef.current?.focus(), 100);
+    };
+
+    const handleWordClick = (word, fromPool) => {
+        if (feedback) return;
+        if (fromPool) {
+            setSelectedWords([...selectedWords, word]);
+            setWordPool(wordPool.filter((w, i) => i !== wordPool.indexOf(word)));
+        } else {
+            setWordPool([...wordPool, word]);
+            setSelectedWords(selectedWords.filter((w, i) => i !== selectedWords.lastIndexOf(word)));
+        }
+    };
+
+    const checkBankAnswer = () => {
+        const answer = selectedWords.join(' ');
+        checkAnswer(answer);
     };
 
     const handleSpeak = () => {
@@ -279,11 +389,14 @@ const LanguageLearner = () => {
             const isCorrect = transcript.trim().toLowerCase().includes(correct.trim().toLowerCase().substring(0, Math.max(3, correct.length * 0.5)));
             if (isCorrect) {
                 awardXP(XP_PER_CORRECT);
-                setFeedback({ correct: true, expected: correct });
+                const heatmap = getDifferenceHeatmap(correct, transcript);
+                setFeedback({ correct: true, expected: correct, heatmap });
                 setShowCelebration(true);
                 setTimeout(() => setShowCelebration(false), 1200);
             } else {
-                setFeedback({ correct: false, expected: correct, got: transcript });
+                const heatmap = getDifferenceHeatmap(correct, transcript);
+                setHearts(prev => Math.max(0, prev - 1));
+                setFeedback({ correct: false, expected: correct, got: transcript, heatmap });
             }
         };
         recognitionRef.current.onerror = () => setIsRecording(false);
@@ -295,27 +408,58 @@ const LanguageLearner = () => {
     const targetLangObj = languages.find(l => l.code === targetLang);
     const targetSpeech = targetLangObj?.speech || targetLang;
 
-    if (view === 'complete') {
+    if (view === 'out-of-hearts') {
         return (
             <div className="max-w-2xl mx-auto px-4 py-16 text-center animate-in fade-in duration-700">
-                <div className="text-8xl mb-6 animate-bounce">🎉</div>
-                <h1 className="text-4xl font-black mb-3 bg-gradient-to-r from-yellow-500 to-orange-500 bg-clip-text text-transparent">
-                    Lesson Complete!
-                </h1>
-                <p className="text-slate-500 mb-8">Amazing work! You earned <span className="font-black text-blue-600">{sessionXP} XP</span> this session.</p>
-                <div className="flex gap-6 justify-center mb-10">
-                    <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-xl border border-slate-200 dark:border-slate-700 w-36">
-                        <p className="text-3xl font-black text-blue-600">{progress.xp}</p>
-                        <p className="text-xs text-slate-400 font-bold uppercase mt-1">Total XP</p>
-                    </div>
-                    <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-xl border border-slate-200 dark:border-slate-700 w-36">
-                        <p className="text-3xl font-black text-orange-500">🔥 {streakCount}</p>
-                        <p className="text-xs text-slate-400 font-bold uppercase mt-1">Day Streak</p>
+                <div className="text-8xl mb-6">💔</div>
+                <h1 className="text-4xl font-black mb-3">Out of Hearts</h1>
+                <p className="text-slate-500 mb-8">Wait for hearts to refill or practice old lessons to gain more!</p>
+                <button onClick={() => setView('home')} className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-xl">
+                    Back to Home
+                </button>
+            </div>
+        );
+    }
+
+    if (view === 'complete') {
+        const xpGoal = 1000;
+        const xpProgress = Math.min(100, (progress.xp / xpGoal) * 100);
+        
+        return (
+            <div className="max-w-2xl mx-auto px-4 py-16 text-center animate-in zoom-in duration-700 pb-32">
+                <div className="relative w-48 h-48 mx-auto mb-10">
+                    <svg className="w-full h-full transform -rotate-90">
+                        <circle cx="96" cy="96" r="88" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-slate-100 dark:text-slate-800" />
+                        <circle cx="96" cy="96" r="88" stroke="currentColor" strokeWidth="12" fill="transparent" strokeDasharray={2 * Math.PI * 88} strokeDashoffset={2 * Math.PI * 88 * (1 - xpProgress / 100)} className="text-blue-500 transition-all duration-[2000ms] ease-out shadow-lg" />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-5xl animate-bounce">🎉</span>
                     </div>
                 </div>
-                <div className="flex gap-4 justify-center">
-                    <button onClick={() => setView('home')} className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-xl shadow-blue-500/20 hover:scale-105 transition-all">
-                        Back to Lessons
+
+                <h1 className="text-5xl font-black mb-4 bg-gradient-to-r from-yellow-500 via-orange-500 to-red-500 bg-clip-text text-transparent">
+                    Unit Mastered!
+                </h1>
+
+                <div className="grid grid-cols-2 gap-4 mb-10">
+                    <div className="bg-white dark:bg-slate-800 rounded-[32px] p-8 shadow-2xl border border-slate-100 dark:border-slate-700 animate-in slide-in-from-left duration-700">
+                        <p className="text-4xl font-black text-blue-600">+{sessionXP}</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-2">XP Earned</p>
+                    </div>
+                    <div className="bg-white dark:bg-slate-800 rounded-[32px] p-8 shadow-2xl border border-slate-100 dark:border-slate-700 animate-in slide-in-from-right duration-700">
+                        <p className="text-4xl font-black text-blue-400">+{Math.floor(sessionXP / 10)}</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-2">Gems Looted</p>
+                    </div>
+                </div>
+
+                <div className="space-y-6">
+                    <div className="flex flex-col items-center gap-2">
+                        <p className="text-sm font-black text-slate-500 uppercase tracking-widest">Streak Status</p>
+                        <p className="text-6xl animate-pulse">🔥 {streakCount}</p>
+                    </div>
+
+                    <button onClick={() => setView('home')} className="w-full max-w-sm py-5 bg-blue-600 text-white rounded-[24px] font-black text-xl shadow-2xl shadow-blue-500/30 hover:scale-105 active:scale-95 transition-all">
+                        Continue to Path →
                     </button>
                 </div>
             </div>
@@ -334,74 +478,108 @@ const LanguageLearner = () => {
                         <div className="text-8xl animate-ping">✨</div>
                     </div>
                 )}
-                <div className="flex items-center justify-between mb-6">
-                    <button onClick={() => setView('home')} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-400 font-bold text-sm">
-                        ← Exit
+                <div className="flex items-center justify-between mb-8">
+                    <button onClick={() => setView('home')} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-400 font-black">
+                        ✕
                     </button>
+                    <div className="flex-1 mx-8 h-4 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner border border-slate-200 dark:border-slate-700 relative">
+                        <div className="h-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-all duration-700 ease-out" style={{ width: `${progressPct}%` }} />
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <span className="text-[8px] font-black uppercase text-slate-400 opacity-50">
+                                {languages.find(l => l.code === targetLang)?.name} Mastery
+                            </span>
+                        </div>
+                    </div>
                     <div className="flex items-center gap-4">
-                        <span className="text-sm font-black text-blue-600">+{sessionXP} XP</span>
-                        <span className="text-sm font-bold text-slate-400">{currentIdx + 1}/{activeLesson.items.length}</span>
+                        <div className="flex items-center gap-1 text-red-500 font-black">
+                            <span>❤️</span> {hearts}
+                        </div>
+                        <div className="flex items-center gap-1 text-blue-500 font-black">
+                            <span>💎</span> {sessionXP}
+                        </div>
                     </div>
                 </div>
-                <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-3 mb-8 overflow-hidden shadow-inner">
-                    <div className="bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 h-full rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"
-                        style={{ width: `${progressPct}%` }} />
-                </div>
 
-                {activeLesson.type === 'dialogue' ? (
-                    <div className="space-y-6">
-                        <div className="bg-white dark:bg-slate-800 rounded-[32px] shadow-2xl p-8 border border-slate-100 dark:border-slate-700">
-                            <div className="flex items-start gap-4 mb-6">
-                                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center text-xl text-white shadow-lg">
-                                    {item.speaker?.charAt(0) || '👤'}
-                                </div>
-                                <div className="flex-1">
-                                    <p className="text-xs font-black text-blue-600 uppercase tracking-widest mb-1">{item.speaker}</p>
-                                    <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 relative">
-                                        <p className="text-xl font-bold leading-relaxed">{item.word}</p>
-                                        <button onClick={() => speak(item.word, 'en-US')} className="absolute top-4 right-4 text-slate-400 hover:text-blue-500 transition-colors">🔊</button>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div className="pl-16 space-y-4">
-                                <p className="text-sm font-black text-slate-400 uppercase tracking-widest">Your Turn — Translate this</p>
-                                <input 
-                                    ref={inputRef}
-                                    type="text" 
-                                    value={userInput}
-                                    onChange={e => setUserInput(e.target.value)}
-                                    onKeyDown={e => { if (e.key === 'Enter' && !feedback) checkAnswer(userInput); }}
-                                    placeholder={`Type in ${languages.find(l => l.code === targetLang)?.name}...`}
-                                    disabled={!!feedback}
-                                    className="w-full p-5 text-lg rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 outline-none focus:border-blue-500 font-bold transition-all shadow-sm"
-                                    autoFocus
-                                />
-                                {feedback ? (
-                                    <div className={`p-6 rounded-2xl animate-in slide-in-from-top-4 duration-300 ${feedback.correct ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
-                                        <p className="font-black text-lg mb-1">{feedback.correct ? '✅ Perfect!' : '❌ Not quite'}</p>
-                                        <p className="text-sm opacity-70">Correct: <span className="font-bold">{feedback.expected}</span></p>
-                                        <button onClick={nextItem} className="mt-4 w-full py-4 bg-blue-600 text-white rounded-xl font-black shadow-lg hover:scale-[1.02] active:scale-95 transition-all">
-                                            Continue Dialogue →
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <button onClick={() => checkAnswer(userInput)}
-                                        disabled={!userInput.trim()}
-                                        className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black shadow-xl shadow-blue-500/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50">
-                                        Send Message
+                {activeMode === 'match' ? (
+                    <div className="w-full max-w-2xl mx-auto space-y-8 animate-in zoom-in duration-500">
+                        <div className="text-center">
+                            <h2 className="text-2xl font-black text-slate-700 dark:text-slate-300">Match the Pairs</h2>
+                            <p className="text-sm text-slate-400 font-bold uppercase tracking-widest mt-2">Connecting words with translations</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            {matchPairs.map((pair) => {
+                                const isMatched = matchedIds.includes(pair.pairId);
+                                const isSelected = selectedMatch?.id === pair.id;
+                                if (isMatched) return <div key={pair.id} className="h-20 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl flex items-center justify-center border-2 border-emerald-500/20 opacity-40 transition-all">✨</div>;
+                                
+                                return (
+                                    <button
+                                        key={pair.id}
+                                        onClick={() => {
+                                            if (!selectedMatch) {
+                                                setSelectedMatch(pair);
+                                            } else if (selectedMatch.id === pair.id) {
+                                                setSelectedMatch(null);
+                                            } else if (selectedMatch.type !== pair.type && selectedMatch.pairId === pair.pairId) {
+                                                // Success!
+                                                setMatchedIds([...matchedIds, pair.pairId]);
+                                                setSelectedMatch(null);
+                                                awardXP(XP_PER_CORRECT);
+                                                if (matchedIds.length + 1 === activeLesson.items.length) {
+                                                    // Lesson complete!
+                                                    setTimeout(() => nextItem(), 500);
+                                                }
+                                            } else {
+                                                // Fail
+                                                setSelectedMatch(pair);
+                                            }
+                                        }}
+                                        className={`h-20 rounded-2xl font-black text-lg shadow-sm transition-all border-b-4 
+                                            ${isSelected ? 'bg-blue-500 text-white border-blue-700 scale-105' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-900 hover:-translate-y-1'}`}
+                                    >
+                                        {pair.text}
                                     </button>
-                                )}
-                            </div>
+                                );
+                            })}
                         </div>
                     </div>
                 ) : (
                     <div className="flex flex-col items-center">
-                        <div className="text-center mb-3">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                {MODES.find(m => m.id === activeMode)?.label} — {activeLesson.title}
-                            </span>
-                        </div>
+                        {/* Word Bank View */}
+                        {activeMode === 'wordbank' || activeLesson.type === 'wordbank' ? (
+                            <div className="w-full max-w-2xl flex flex-col gap-8 animate-in slide-in-from-bottom-8 duration-500">
+                                <div className="flex items-center gap-6 bg-white dark:bg-slate-800 p-8 rounded-[32px] shadow-xl border border-slate-100 dark:border-slate-700 relative">
+                                    <div className="absolute -top-12 -left-4 w-28 h-28 drop-shadow-2xl animate-bounce duration-[3000ms]">
+                                        <img src={MascotImg} alt="Mascot" className="w-full h-full object-contain" />
+                                    </div>
+                                    <div className="w-20" /> {/* Spacer for mascot */}
+                                    <div className="flex-1">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Translate this sentence</p>
+                                        <p className="text-2xl font-black">{item.word}</p>
+                                    </div>
+                                    <button onClick={() => speak(item.word, 'en-US')} className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl hover:scale-110 transition-all">🔊</button>
+                                </div>
+
+                                <div className="min-h-[120px] p-6 bg-slate-50 dark:bg-slate-900/50 rounded-[32px] border-2 border-dashed border-slate-200 dark:border-slate-700 flex flex-wrap gap-2 items-center justify-center">
+                                    {selectedWords.length === 0 && <p className="text-slate-400 font-bold italic">Tap words to build translation...</p>}
+                                    {selectedWords.map((word, i) => (
+                                        <button key={i} onClick={() => handleWordClick(word, false)} className="px-5 py-3 bg-white dark:bg-slate-800 rounded-2xl shadow-md border-b-4 border-slate-200 dark:border-slate-950 font-black hover:-translate-y-1 transition-all">
+                                            {word}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <div className="flex flex-wrap gap-2 justify-center py-6">
+                                    {wordPool.map((word, i) => (
+                                        <button key={i} onClick={() => handleWordClick(word, true)} className="px-5 py-3 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border-b-4 border-slate-200 dark:border-slate-950 font-black hover:bg-slate-50 dark:hover:bg-slate-700 transition-all active:scale-95">
+                                            {word}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : null}
+
+                        {/* Other Modes ... */}
 
                         {loadingTranslations ? (
                             <div className="flex flex-col items-center justify-center py-20">
@@ -523,7 +701,10 @@ const LanguageLearner = () => {
                             <div className="flex flex-col items-center w-full">
                                 <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-[32px] shadow-2xl border border-slate-100 dark:border-slate-700 p-8 mb-4 text-center">
                                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Say this in {languages.find(l => l.code === targetLang)?.name}</p>
-                                    <p className="text-2xl font-black mb-4">{translated}</p>
+                                    <p className="text-2xl font-black mb-1">{translated}</p>
+                                    {getPhoneticHint(translated, targetLang) && (
+                                        <p className="text-sm font-black text-blue-500 mb-4">{getPhoneticHint(translated, targetLang)}</p>
+                                    )}
                                     <button onClick={() => speak(translated, targetSpeech)}
                                         className="px-6 py-2 bg-slate-100 dark:bg-slate-700 rounded-xl text-sm font-bold hover:scale-105 transition-all flex items-center gap-2 mx-auto">
                                         🔊 Hear Again
@@ -540,10 +721,20 @@ const LanguageLearner = () => {
                                     <p className="mt-4 text-sm text-slate-500">You said: <span className="font-bold text-slate-700 dark:text-slate-300">"{userInput}"</span></p>
                                 )}
                                 {feedback ? (
-                                    <div className={`w-full max-w-md mt-6 p-5 rounded-2xl ${feedback.correct ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
-                                        <p className="font-black text-lg">{feedback.correct ? '✅ Great pronunciation!' : '❌ Try again'}</p>
-                                        <p className="text-sm mt-1 opacity-70">Expected: <span className="font-bold">{feedback.expected}</span></p>
-                                        <button onClick={nextItem} className="mt-4 w-full py-4 bg-blue-600 text-white rounded-2xl font-bold hover:scale-105 transition-all">
+                                    <div className={`w-full max-w-md mt-6 p-6 rounded-[32px] ${feedback.correct ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-red-500/10 border border-red-500/20 shadow-xl'}`}>
+                                        <p className="font-black text-lg mb-4">{feedback.correct ? '✅ Great pronunciation!' : '❌ Try again'}</p>
+                                        
+                                        <div className="flex flex-wrap gap-2 mb-6 p-4 bg-white/50 dark:bg-black/20 rounded-2xl">
+                                            {feedback.heatmap?.map((item, i) => (
+                                                <span key={i} className={`px-2 py-1 rounded-lg font-bold text-sm ${item.score === 1 ? 'text-emerald-600' : 'text-red-500 bg-red-500/10 underline decoration-wavy'}`}>
+                                                    {item.word}
+                                                </span>
+                                            ))}
+                                        </div>
+
+                                        <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Analysis</p>
+                                        <p className="text-sm opacity-70">Expected: <span className="font-bold">{feedback.expected}</span></p>
+                                        <button onClick={nextItem} className="mt-6 w-full py-4 bg-blue-600 text-white rounded-2xl font-bold hover:scale-105 shadow-lg active:scale-95 transition-all">
                                             Continue →
                                         </button>
                                     </div>
@@ -587,14 +778,59 @@ const LanguageLearner = () => {
                                     })}
                                 </div>
                                 {feedback && (
-                                    <button onClick={nextItem} className="mt-6 px-12 py-4 bg-blue-600 text-white rounded-2xl font-black shadow-xl hover:scale-105 transition-all w-full max-w-md text-center">
-                                        Continue →
-                                    </button>
+                                    <div className="mt-8 text-center text-slate-400 font-bold italic animate-pulse">
+                                        Check the feedback below
+                                    </div>
                                 )}
                             </div>
                         ) : null}
                     </div>
                 )}
+                
+                {/* Bottom Feedback Bar */}
+                <div className={`fixed bottom-0 left-0 right-0 p-8 z-40 transition-all duration-500 border-t-2 ${
+                    !feedback ? 'bg-white dark:bg-slate-900 translate-y-0' :
+                    feedback.correct ? 'bg-emerald-100 border-emerald-200 text-emerald-900' : 'bg-red-100 border-red-200 text-red-900'
+                }`}>
+                    <div className="max-w-3xl mx-auto flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            {feedback && (
+                                <div className={`w-20 h-20 rounded-full flex items-center justify-center text-4xl shadow-lg border-4 ${feedback.correct ? 'bg-white border-emerald-500' : 'bg-white border-red-500'}`}>
+                                    {feedback.correct ? '✅' : '❌'}
+                                </div>
+                            )}
+                            <div>
+                                {feedback ? (
+                                    <>
+                                        <p className="text-2xl font-black">{feedback.correct ? 'You are correct!' : 'Correct solution:'}</p>
+                                        {!feedback.correct && <p className="text-lg font-bold opacity-80">{feedback.expected}</p>}
+                                    </>
+                                ) : (
+                                    <button className="text-sm font-black text-slate-400 uppercase tracking-widest hover:text-slate-600">Skip Item</button>
+                                )}
+                            </div>
+                        </div>
+                        
+                        {(activeMode === 'wordbank' || activeLesson.type === 'wordbank') && !feedback ? (
+                            <button onClick={checkBankAnswer} disabled={selectedWords.length === 0}
+                                className="px-12 py-4 bg-emerald-500 text-white rounded-2xl font-black shadow-xl shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all text-xl disabled:opacity-50">
+                                Check
+                            </button>
+                        ) : feedback ? (
+                            <button onClick={nextItem} className={`px-12 py-4 rounded-2xl font-black shadow-xl hover:scale-105 active:scale-95 transition-all text-xl text-white ${feedback.correct ? 'bg-emerald-500 shadow-emerald-500/20' : 'bg-red-500 shadow-red-500/20'}`}>
+                                Continue
+                            </button>
+                        ) : activeMode === 'flashcard' ? (
+                            <button onClick={() => { setFlipped(true); speak(translated, targetSpeech); checkAnswer(translated); }} className="px-12 py-4 bg-blue-600 text-white rounded-2xl font-black shadow-xl hover:scale-105 transition-all text-xl">
+                                Reveal
+                            </button>
+                        ) : (
+                            <button disabled={!userInput.trim()} onClick={() => checkAnswer(userInput)} className="px-12 py-4 bg-emerald-500 text-white rounded-2xl font-black shadow-xl shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all text-xl disabled:opacity-50">
+                                Check
+                            </button>
+                        )}
+                    </div>
+                </div>
             </div>
         );
     }
@@ -602,187 +838,261 @@ const LanguageLearner = () => {
     const todayDayOfYear = Math.floor((new Date().getTime() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
     const dailyTopic = DAILY_THEMES[todayDayOfYear % DAILY_THEMES.length];
 
-    return (
-        <div className="max-w-5xl mx-auto px-4 py-8 space-y-8 animate-in fade-in duration-700 pb-24">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="text-center md:text-left space-y-2">
-                    <div className="inline-block px-4 py-1.5 bg-emerald-600/10 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-widest mb-1 border border-emerald-600/10">
-                        Dynamic AI Learner
-                    </div>
-                    <h1 className="text-5xl font-black tracking-tighter bg-gradient-to-br from-emerald-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">
-                        Personalized Path
-                    </h1>
-                    <p className="text-slate-500 font-medium">Choose your own adventure or follow the daily mission.</p>
-                </div>
-                
-                <div className="bg-white dark:bg-slate-800 rounded-3xl p-5 shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col items-center">
-                    <div className="text-3xl font-black text-slate-800 dark:text-white tabular-nums">
-                        {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                    </div>
-                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
-                        {currentTime.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-                    </div>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="bg-white dark:bg-slate-800 rounded-[32px] p-6 shadow-xl border border-slate-200 dark:border-slate-700 flex items-center gap-4 group hover:scale-[1.02] transition-all">
-                    <div className="w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">⚡</div>
-                    <div>
-                        <p className="text-3xl font-black text-blue-600">{progress.xp}</p>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Experience</p>
-                    </div>
-                </div>
-
-                <div className="bg-white dark:bg-slate-800 rounded-[32px] p-6 shadow-xl border border-slate-200 dark:border-slate-700 flex flex-col justify-center gap-2 group hover:scale-[1.02] transition-all">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-orange-500 font-black">
-                            <span className="text-2xl group-hover:animate-bounce">🔥</span> {streakCount} Days
+    if (view === 'home') {
+        return (
+            <div className="max-w-4xl mx-auto px-4 py-8 space-y-12 animate-in fade-in duration-700 pb-32">
+                {/* Header Stats */}
+                <div className="flex items-center justify-between bg-white dark:bg-slate-800 p-6 rounded-[32px] shadow-xl border border-slate-100 dark:border-slate-700">
+                    <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-2">
+                            <span className="text-2xl">🔥</span>
+                            <span className="font-black text-orange-500">{streakCount}</span>
                         </div>
-                        <div className="relative w-12 h-12">
-                            <svg className="w-12 h-12 transform -rotate-90">
-                                <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-slate-100 dark:text-slate-700" />
-                                <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="4" fill="transparent" strokeDasharray={125.6} strokeDashoffset={125.6 - (125.6 * goalProgress) / 100} className="text-orange-500 transition-all duration-1000" />
-                            </svg>
-                            <span className="absolute inset-0 flex items-center justify-center text-[8px] font-black">{Math.round(goalProgress)}%</span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-2xl text-blue-500">💎</span>
+                            <span className="font-black text-blue-500">{progress.xp}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-2xl text-red-500">❤️</span>
+                            <span className="font-black text-red-500">{hearts}</span>
                         </div>
                     </div>
                     <div className="flex gap-2">
-                        {getLast7Days().map((day, i) => (
-                            <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                                <div className={`w-full h-1.5 rounded-full transition-all ${day.active ? 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.4)]' : 'bg-slate-100 dark:bg-slate-700'}`} />
-                                <span className="text-[9px] font-bold text-slate-400">{day.label}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="bg-white dark:bg-slate-800 rounded-[32px] p-6 shadow-xl border border-slate-200 dark:border-slate-700 flex items-center gap-4 group hover:scale-[1.02] transition-all">
-                    <div className="w-16 h-16 bg-purple-500/10 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">⏱️</div>
-                    <div>
-                        <p className="text-3xl font-black text-purple-600">{timeInMins}<span className="text-sm">m</span></p>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Spent Today</p>
-                    </div>
-                </div>
-            </div>
-
-            <div className="space-y-6">
-                <div className="bg-gradient-to-br from-indigo-600 via-purple-700 to-pink-600 rounded-[40px] p-8 md:p-12 text-white shadow-2xl relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full -mr-40 -mt-40 blur-3xl transition-transform group-hover:scale-125 duration-1000" />
-                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/5 rounded-full -ml-32 -mb-32 blur-2xl" />
-                    
-                    <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-12">
-                        <div className="text-center lg:text-left space-y-4">
-                            <div className="inline-flex items-center gap-2 px-4 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-black uppercase tracking-widest">
-                                <span className="relative flex h-2 w-2">
-                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
-                                </span>
-                                Daily Objective
-                            </div>
-                            <h2 className="text-4xl md:text-5xl font-black tracking-tight leading-tight">Mastering: {dailyTopic}</h2>
-                            <p className="text-indigo-100 max-w-lg text-lg font-medium opacity-90">Jump into today's AI-generated scenario and earn bonus XP while practicing contextual communication.</p>
-                            <div className="flex flex-wrap justify-center lg:justify-start gap-3">
-                                <span className="px-3 py-1 bg-white/10 rounded-lg text-xs font-bold border border-white/20">4 Dialogues</span>
-                                <span className="px-3 py-1 bg-white/10 rounded-lg text-xs font-bold border border-white/20">Listening Practice</span>
-                                <span className="px-3 py-1 bg-white/10 rounded-lg text-xs font-bold border border-white/20">+50 XP Bonus</span>
-                            </div>
-                        </div>
-                        <button 
-                            disabled={generating}
-                            onClick={() => handleGenerateDynamic()}
-                            className="w-full lg:w-auto px-12 py-6 bg-white text-indigo-700 rounded-[24px] font-black shadow-2xl hover:scale-105 active:scale-95 transition-all text-xl flex items-center justify-center gap-4 group/btn disabled:opacity-50"
-                        >
-                            {generating ? (
-                                <span className="w-6 h-6 border-3 border-indigo-700 border-t-transparent rounded-full animate-spin" />
-                            ) : (
-                                <>🚀 Launch Mission <span className="group-hover:translate-x-2 transition-transform">→</span></>
-                            )}
-                        </button>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Native Language</label>
-                        <select value={nativeLang} onChange={e => setNativeLang(e.target.value)}
-                            className="w-full p-5 bg-white dark:bg-slate-800 rounded-[28px] shadow-lg border-2 border-slate-100 dark:border-slate-700 font-bold text-sm outline-none focus:border-blue-500 cursor-pointer transition-all hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                        <select value={targetLang} onChange={e => setTargetLang(e.target.value)} 
+                            className="bg-slate-100 dark:bg-slate-900 border-none rounded-xl px-3 py-1.5 font-bold text-xs outline-none">
                             {languages.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
                         </select>
                     </div>
-                    <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Target Language</label>
-                        <select value={targetLang} onChange={e => setTargetLang(e.target.value)}
-                            className="w-full p-5 bg-white dark:bg-slate-800 rounded-[28px] shadow-lg border-2 border-slate-100 dark:border-slate-700 font-bold text-sm outline-none focus:border-emerald-500 cursor-pointer transition-all hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                            {languages.filter(l => l.code !== nativeLang).map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
-                        </select>
-                    </div>
-                </div>
-                
-                <div className="pt-8">
-                    <GlobeSelector 
-                        onSelectLanguage={(lang) => setTargetLang(lang)}
-                        currentLanguage={targetLang}
-                    />
                 </div>
 
-                    <div className="bg-white dark:bg-slate-800 rounded-[32px] p-6 shadow-xl border border-slate-200 dark:border-slate-700 space-y-4">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Learning Depth (Difficulty)</p>
-                        <div className="grid grid-cols-5 gap-2">
-                            {DIFFICULTY_LEVELS.map(level => (
+                {/* Duolingo-style Path */}
+                <div className="flex flex-col items-center gap-12 py-10 relative">
+                    {/* SVG Connector Path */}
+                    <svg className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-20 dark:opacity-10" style={{ zIndex: 0 }}>
+                        {unitPath.map((unit, idx) => {
+                            if (idx === unitPath.length - 1) return null;
+                            const isVp = idx % 2 === 0; // Winding pattern logic
+                            const x1 = isVp ? 'calc(50% + 40px)' : 'calc(50% - 40px)';
+                            const x2 = isVp ? 'calc(50% - 40px)' : 'calc(50% + 40px)';
+                            const y1 = idx * 152 + 48; // Node height + gap
+                            const y2 = (idx + 1) * 152 + 48;
+                            return (
+                                <path 
+                                    key={`path-${idx}`}
+                                    d={`M ${x1} ${y1} C ${x1} ${y1 + 50}, ${x2} ${y2 - 50}, ${x2} ${y2}`}
+                                    fill="transparent"
+                                    stroke="currentColor"
+                                    strokeWidth="12"
+                                    strokeLinecap="round"
+                                    className="text-slate-400"
+                                />
+                            );
+                        })}
+                    </svg>
+
+                    {unitPath.map((unit, idx) => {
+                        const isCompleted = (progress.completedLessons || []).includes(`${unit.title}_${targetLang}`);
+                        const isAvailable = idx === 0 || (progress.completedLessons || []).includes(`${unitPath[idx-1].title}_${targetLang}`);
+                        
+                        const marginLeft = idx % 2 === 0 ? '0' : '80px';
+                        const marginRight = idx % 2 === 0 ? '80px' : '0';
+
+                        return (
+                            <div key={unit.id} className="flex flex-col items-center relative z-10" style={{ marginLeft, marginRight }}>
                                 <button
-                                    key={level.id}
-                                    onClick={() => setDifficulty(level.id)}
-                                    className={`flex flex-col items-center justify-center p-3 rounded-2xl transition-all border-2 ${difficulty === level.id ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-slate-100 dark:bg-slate-900 border-transparent text-slate-500 hover:border-slate-300'}`}
+                                    disabled={!isAvailable}
+                                    onClick={() => handleGenerateDynamic(unit.topic)}
+                                    className={`w-28 h-28 rounded-full flex items-center justify-center text-5xl shadow-2xl relative group transition-all duration-500
+                                        ${isCompleted ? 'bg-yellow-400 border-b-8 border-yellow-600' : 
+                                          isAvailable ? 'bg-blue-500 border-b-8 border-blue-700 hover:scale-110 active:scale-95' : 
+                                          'bg-slate-200 border-b-8 border-slate-300 opacity-60'}`}
                                 >
-                                    <span className="text-xl mb-1">{level.icon}</span>
-                                    <span className="text-[8px] font-black uppercase text-center leading-tight">{level.label}</span>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+                                    {isCompleted ? '⭐' : unit.icon}
+                                    
+                                    {isAvailable && !isCompleted && (
+                                        <div className="absolute inset-0 rounded-full animate-ping bg-blue-400/20 pointer-events-none" />
+                                    )}
 
-                    <div className="bg-white dark:bg-slate-800 rounded-[40px] p-8 md:p-12 shadow-xl border border-slate-200 dark:border-slate-700 text-center space-y-8 relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-2 h-full bg-blue-600" />
-                    <div>
-                        <h2 className="text-3xl font-black mb-3">Scenario Explorer</h2>
-                        <p className="text-slate-500 max-w-md mx-auto font-medium">Create any situation you'd like to practice. Our AI will guide the conversation.</p>
-                    </div>
-                    
-                    <div className="max-w-2xl mx-auto space-y-4">
-                        <div className="flex flex-col sm:flex-row gap-3">
-                            <input 
-                                type="text" 
-                                placeholder="Try 'Ordering coffee in Paris' or 'Lost in a Tokyo subway'..."
-                                value={customTopic}
-                                onChange={(e) => setCustomTopic(e.target.value)}
-                                className="flex-1 p-6 bg-slate-100 dark:bg-slate-900/50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold transition-all text-lg"
-                            />
-                            <button 
-                                disabled={!customTopic.trim() || generating}
-                                onClick={() => handleGenerateDynamic(customTopic)}
-                                className="px-10 py-6 bg-slate-900 dark:bg-blue-600 text-white rounded-2xl font-black shadow-xl hover:scale-105 active:scale-95 transition-all text-lg disabled:opacity-50"
-                            >
-                                Generate
+                                    {/* Tooltip */}
+                                    <div className="absolute -top-14 left-1/2 -translate-x-1/2 px-6 py-3 bg-slate-900 text-white text-xs font-black rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-2xl z-50">
+                                        Unit {unit.id}: {unit.title}
+                                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-slate-900 rotate-45" />
+                                    </div>
+                                </button>
+                                <span className={`mt-4 font-black text-sm uppercase tracking-widest ${isAvailable ? 'text-slate-700 dark:text-slate-300' : 'text-slate-300'}`}>
+                                    {unit.title}
+                                </span>
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* Globe & Daily Challenge */}
+                <div className="pt-20">
+                    <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[40px] p-8 text-white shadow-2xl flex flex-col md:flex-row items-center justify-between gap-8">
+                        <div className="space-y-4">
+                            <h2 className="text-3xl font-black">Skill Challenge</h2>
+                            <p className="opacity-80 font-medium">Earn double XP with today's focus: {dailyTopic}</p>
+                            <button onClick={() => handleGenerateDynamic()} className="px-8 py-4 bg-white text-blue-600 rounded-2xl font-black shadow-xl hover:scale-105 transition-all">
+                                Practice Now →
                             </button>
                         </div>
-
-                        <div className="flex flex-wrap justify-center gap-2 pt-2">
-                            {TOPICS.slice(0, 8).map(topic => (
-                                <button 
-                                    key={topic}
-                                    onClick={() => handleGenerateDynamic(topic)}
-                                    className="px-5 py-2.5 bg-slate-100 dark:bg-slate-900/50 rounded-xl text-[11px] font-black text-slate-500 hover:text-blue-500 hover:bg-blue-500/10 transition-all border-2 border-transparent hover:border-blue-500/20 uppercase tracking-wider"
-                                >
-                                    {topic}
-                                </button>
-                            ))}
+                        <div className="w-full max-w-[400px]">
+                            <GlobeSelector onSelectLanguage={setTargetLang} currentLanguage={targetLang} />
                         </div>
+                    </div>
+                </div>
+
+                {/* Duolingo Navbar */}
+                <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t-2 border-slate-100 dark:border-slate-800 p-4 z-50">
+                    <div className="max-w-md mx-auto flex justify-between px-6">
+                        <button onClick={() => setView('home')} className={`flex flex-col items-center gap-1 ${view === 'home' ? 'text-blue-500' : 'text-slate-400'}`}>
+                            <span className="text-2xl">🏚️</span>
+                            <span className="text-[10px] font-black uppercase">Learn</span>
+                        </button>
+                        <button onClick={() => setView('league')} className={`flex flex-col items-center gap-1 ${view === 'league' ? 'text-blue-500' : 'text-slate-400'}`}>
+                            <span className="text-2xl">🏆</span>
+                            <span className="text-[10px] font-black uppercase">Leagues</span>
+                        </button>
+                        <button onClick={() => setView('shop')} className={`flex flex-col items-center gap-1 ${view === 'shop' ? 'text-blue-500' : 'text-slate-400'}`}>
+                            <span className="text-2xl">🛒</span>
+                            <span className="text-[10px] font-black uppercase">Shop</span>
+                        </button>
                     </div>
                 </div>
             </div>
-        </div>
-    );
+        );
+    }
+
+    if (view === 'shop') {
+        const items = [
+            { id: 'heart', name: 'Refill Hearts', desc: 'Get back to 5 hearts', price: 50, icon: '❤️' },
+            { id: 'freeze', name: 'Streak Freeze', desc: 'Keep your streak if you miss a day', price: 200, icon: '❄️' },
+            { id: 'bonus', name: 'Bonus Unit', desc: 'Unlock a specialized secret unit', price: 500, icon: '🗝️' },
+        ];
+
+        const buyItem = (item) => {
+            if (gems < item.price) return;
+            setGems(prev => prev - item.price);
+            if (item.id === 'heart') setHearts(5);
+            if (item.id === 'freeze') setStreakFreezes(prev => prev + 1);
+            
+            setProgress(prev => {
+                const updated = { ...prev, gems: prev.gems - item.price, hearts: item.id === 'heart' ? 5 : prev.hearts, streakFreezes: item.id === 'freeze' ? (prev.streakFreezes || 0) + 1 : prev.streakFreezes };
+                saveProgress(updated);
+                return updated;
+            });
+        };
+
+        return (
+            <div className="max-w-4xl mx-auto px-4 py-8 space-y-8 animate-in fade-in duration-700 pb-32">
+                <div className="text-center space-y-2">
+                    <h1 className="text-4xl font-black tracking-tight text-blue-600">Shop</h1>
+                    <p className="text-slate-500 font-bold">Spend your hard-earned gems on power-ups!</p>
+                </div>
+
+                <div className="flex items-center justify-center gap-2 bg-blue-500/10 p-4 rounded-3xl border border-blue-500/20 w-fit mx-auto">
+                    <span className="text-2xl">💎</span>
+                    <span className="text-xl font-black text-blue-600">{gems} Gems</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {items.map(item => (
+                        <div key={item.id} className="bg-white dark:bg-slate-800 p-8 rounded-[32px] shadow-xl border border-slate-100 dark:border-slate-700 flex flex-col items-center text-center space-y-4">
+                            <span className="text-5xl">{item.icon}</span>
+                            <div>
+                                <h3 className="text-xl font-black">{item.name}</h3>
+                                <p className="text-sm text-slate-500 mt-2">{item.desc}</p>
+                            </div>
+                            <button 
+                                onClick={() => buyItem(item)}
+                                disabled={gems < item.price}
+                                className={`w-full py-4 rounded-2xl font-black shadow-lg transition-all ${gems >= item.price ? 'bg-blue-600 text-white hover:scale-105 active:scale-95' : 'bg-slate-100 text-slate-400 opacity-50'}`}
+                            >
+                                💎 {item.price}
+                            </button>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Duolingo Navbar */}
+                <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t-2 border-slate-100 dark:border-slate-800 p-4 z-50">
+                    <div className="max-w-md mx-auto flex justify-between px-6">
+                        <button onClick={() => setView('home')} className={`flex flex-col items-center gap-1 ${view === 'home' ? 'text-blue-500' : 'text-slate-400'}`}>
+                            <span className="text-2xl">🏚️</span>
+                            <span className="text-[10px] font-black uppercase">Learn</span>
+                        </button>
+                        <button onClick={() => setView('league')} className={`flex flex-col items-center gap-1 ${view === 'league' ? 'text-blue-500' : 'text-slate-400'}`}>
+                            <span className="text-2xl">🏆</span>
+                            <span className="text-[10px] font-black uppercase">Leagues</span>
+                        </button>
+                        <button onClick={() => setView('shop')} className={`flex flex-col items-center gap-1 ${view === 'shop' ? 'text-blue-500' : 'text-slate-400'}`}>
+                            <span className="text-2xl">🛒</span>
+                            <span className="text-[10px] font-black uppercase">Shop</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (view === 'league') {
+        const competitors = [
+            { name: 'Alex', xp: 1250, avatar: '👤' },
+            { name: 'You', xp: progress.xp, avatar: '🧠', isUser: true },
+            { name: 'Sam', xp: 840, avatar: '👤' },
+            { name: 'Jordan', xp: 620, avatar: '👤' },
+            { name: 'Casey', xp: 450, avatar: '👤' },
+        ].sort((a,b) => b.xp - a.xp);
+
+        return (
+            <div className="max-w-4xl mx-auto px-4 py-8 space-y-8 animate-in fade-in duration-700 pb-32">
+                <div className="text-center space-y-2">
+                    <h1 className="text-4xl font-black tracking-tight text-orange-500">{activeLeague} League</h1>
+                    <p className="text-slate-500 font-bold">Top 3 advance to the next league!</p>
+                </div>
+
+                <div className="bg-white dark:bg-slate-800 rounded-[40px] shadow-2xl overflow-hidden border border-slate-100 dark:border-slate-700">
+                    {competitors.map((c, i) => (
+                        <div key={i} className={`flex items-center gap-6 p-6 border-b border-slate-50 dark:border-slate-800 transition-all ${c.isUser ? 'bg-blue-500/5' : ''}`}>
+                            <span className={`text-xl font-black w-8 ${i < 3 ? 'text-orange-500' : 'text-slate-400'}`}>{i + 1}</span>
+                            <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-900 flex items-center justify-center text-2xl shadow-inner border-2 border-white dark:border-slate-800">
+                                {c.avatar}
+                            </div>
+                            <div className="flex-1">
+                                <p className={`font-black ${c.isUser ? 'text-blue-600' : ''}`}>{c.name}</p>
+                                {i < 3 && <p className="text-[10px] font-black uppercase tracking-widest text-orange-400">Promotion Zone</p>}
+                            </div>
+                            <div className="text-right">
+                                <p className="font-black text-slate-700 dark:text-slate-200">{c.xp} XP</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Duolingo Navbar */}
+                <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t-2 border-slate-100 dark:border-slate-800 p-4 z-50">
+                    <div className="max-w-md mx-auto flex justify-between px-6">
+                        <button onClick={() => setView('home')} className={`flex flex-col items-center gap-1 ${view === 'home' ? 'text-blue-500' : 'text-slate-400'}`}>
+                            <span className="text-2xl">🏚️</span>
+                            <span className="text-[10px] font-black uppercase">Learn</span>
+                        </button>
+                        <button onClick={() => setView('league')} className={`flex flex-col items-center gap-1 ${view === 'league' ? 'text-blue-500' : 'text-slate-400'}`}>
+                            <span className="text-2xl">🏆</span>
+                            <span className="text-[10px] font-black uppercase">Leagues</span>
+                        </button>
+                        <button onClick={() => setView('shop')} className={`flex flex-col items-center gap-1 ${view === 'shop' ? 'text-blue-500' : 'text-slate-400'}`}>
+                            <span className="text-2xl">🛒</span>
+                            <span className="text-[10px] font-black uppercase">Shop</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Default view if none of the above conditions are met (e.g., 'dashboard' view)
+    return null;
 };
 
 export default LanguageLearner;

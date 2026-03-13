@@ -9,6 +9,7 @@ import CameraTranslator from './components/CameraTranslator';
 import LanguageLearner from './components/LanguageLearner';
 import Home from './components/Home';
 import Layout from './components/Layout';
+import MemoryGraph from './components/MemoryGraph';
 import { Analytics } from '@vercel/analytics/react';
 
 const App = () => {
@@ -29,6 +30,7 @@ const App = () => {
           <Route path="camera" element={<CameraTranslator />} />
           <Route path="models" element={<Models />} />
           <Route path="learn" element={<LanguageLearner />} />
+          <Route path="memory" element={<MemoryGraph />} />
         </Route>
       </Routes>
     </Router>

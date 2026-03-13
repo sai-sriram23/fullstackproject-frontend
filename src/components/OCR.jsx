@@ -10,6 +10,7 @@ const OCR = () => {
     const [progress, setProgress] = useState(0);
     const [status, setStatus] = useState('');
     const [isFormatted, setIsFormatted] = useState(false);
+    const [privacyMode, setPrivacyMode] = useState(false);
     const [rawText, setRawText] = useState('');
     const handleImageUpload = (e) => {
         if (e.target.files && e.target.files[0]) {
@@ -42,7 +43,8 @@ const OCR = () => {
                 },
             });
             const cleanedText = cleanOCRText(result.data.text);
-            setText(cleanedText);
+            const finalText = privacyMode ? redactPII(cleanedText) : cleanedText;
+            setText(finalText);
             setRawText(cleanedText);
             setStatus('✅ Done');
             const username = localStorage.getItem('username') || 'anonymous';
@@ -58,6 +60,21 @@ const OCR = () => {
             setLoading(false);
         }
     };
+    const redactPII = (text) => {
+        return text
+            .replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, '[EMAIL REDACTED]')
+            .replace(/\b(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g, '[PHONE REDACTED]')
+            .replace(/\b\d{4}[-.\s]?\d{4}[-.\s]?\d{4}[-.\s]?\d{4}\b/g, '[CARD REDACTED]');
+    };
+
+    const togglePrivacy = () => {
+        const newMode = !privacyMode;
+        setPrivacyMode(newMode);
+        if (rawText) {
+            setText(newMode ? redactPII(rawText) : rawText);
+        }
+    };
+
     const toggleSmartArrange = () => {
         if (!isFormatted) {
             const arranged = arrangeOCRText(rawText);
@@ -117,13 +134,22 @@ const OCR = () => {
                             <span className="text-xs font-black uppercase tracking-widest text-slate-400">Result Card</span>
                             <div className="flex gap-2">
                                 {text && (
-                                    <button 
-                                        onClick={toggleSmartArrange}
-                                        className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all
-                                            ${isFormatted ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-indigo-500 hover:text-white'}`}
-                                    >
-                                        {isFormatted ? '✨ Structured' : '✨ Smart Arrange'}
-                                    </button>
+                                    <div className="flex gap-2">
+                                        <button 
+                                            onClick={togglePrivacy}
+                                            className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all
+                                                ${privacyMode ? 'bg-red-600 text-white shadow-lg shadow-red-500/30' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-red-500 hover:text-white'}`}
+                                        >
+                                            {privacyMode ? '🔒 Privacy On' : '🔓 Privacy Off'}
+                                        </button>
+                                        <button 
+                                            onClick={toggleSmartArrange}
+                                            className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all
+                                                ${isFormatted ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-indigo-500 hover:text-white'}`}
+                                        >
+                                            {isFormatted ? '✨ Structured' : '✨ Smart Arrange'}
+                                        </button>
+                                    </div>
                                 )}
                                 <div className="w-2 h-2 rounded-full bg-red-400"></div>
                                 <div className="w-2 h-2 rounded-full bg-yellow-400"></div>

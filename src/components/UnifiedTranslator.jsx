@@ -10,6 +10,7 @@ const Translator = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [progress, setProgress] = useState(null);
     const [isRecording, setIsRecording] = useState(false);
+    const [error, setError] = useState(null);
     const worker = useRef(null);
     const recognition = useRef(null);
     const synthesis = useRef(window.speechSynthesis);
@@ -40,6 +41,8 @@ const Translator = () => {
                 }).catch(() => {});
             } else if (status === 'error') {
                 setIsLoading(false);
+                setError(error);
+                console.error('Translation Error:', error);
             }
         };
         worker.current.addEventListener('message', onMessage);
@@ -73,6 +76,7 @@ const Translator = () => {
     const handleTranslate = () => {
         if (!worker.current || !inputText.trim()) return;
         setIsLoading(true);
+        setError(null);
         setOutputText('');
         worker.current.postMessage({
             text: inputText,
@@ -191,6 +195,12 @@ const Translator = () => {
                                 <button onClick={() => speak(outputText, tgtLang)} className="p-2 hover:bg-white dark:hover:bg-slate-800 rounded-lg transition-colors">🔊</button>
                             )}
                         </div>
+                        {error && (
+                            <div className="absolute inset-x-0 top-0 mt-4 mx-4 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 text-xs font-bold animate-in slide-in-from-top-4 z-30">
+                                ⚠️ {error}
+                                <p className="mt-1 font-normal opacity-70">Tip: Translation models are large. Try refreshing or using a faster connection.</p>
+                            </div>
+                        )}
                         {outputText ? (
                             <p className="text-xl leading-relaxed font-medium animate-in slide-in-from-bottom-4">
                                 {outputText}

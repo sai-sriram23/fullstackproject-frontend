@@ -11,7 +11,11 @@ class TranslationPipeline {
     static instance: any = null;
     static async getInstance(progress_callback: any = null) {
         if (this.instance === null) {
-            this.instance = await pipeline(this.task as any, this.model, { progress_callback });
+            console.log('Loading model:', this.model);
+            this.instance = await pipeline(this.task as any, this.model, { 
+                progress_callback,
+                quantized: true, // Force quantization for better mobile performance
+            });
         }
         return this.instance;
     }

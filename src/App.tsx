@@ -18,7 +18,6 @@ import Layout from './components/Layout';                   // Shared navbar/foo
 import Auth from './components/Auth';                       // Login + Register form
 import Translator from './components/UnifiedTranslator';    // All 4 translation modes
 import OCR from './components/OCR';                         // Extract text from images
-import Voice from './components/Voice';                     // Voice dictation + translation
 import Models from './components/ModelManager';             // View/clear cached AI models
 import CameraTranslator from './components/CameraTranslator'; // Live camera OCR + translate
 import Dashboard from './components/Dashboard';             // Profile + history + cache info
@@ -45,7 +44,6 @@ const App: React.FC = () => {
           <Route path="translator" element={<Translator />} />
           <Route path="ocr" element={<OCR />} />
           <Route path="camera" element={<CameraTranslator />} />
-          <Route path="voice" element={<Voice />} />
           <Route path="models" element={<Models />} />
 
         </Route>

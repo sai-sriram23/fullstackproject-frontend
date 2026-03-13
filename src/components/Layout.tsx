@@ -78,7 +78,6 @@ const Layout: React.FC = () => {
         { path: '/camera', label: 'Camera', icon: '📸' },
         { path: '/translator', label: 'Translator', icon: '🌐' },
         { path: '/ocr', label: 'OCR', icon: '📄' },
-        { path: '/voice', label: 'Voice', icon: '🎙️' },
         { path: '/models', label: 'Models', icon: '💾' },
     ];
 

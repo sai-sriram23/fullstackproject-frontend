@@ -65,6 +65,8 @@ const GlobeSelector = ({ onSelectLanguage, currentLanguage }) => {
           if (data) setSelectedCountry(data);
           else setSelectedCountry({ name: d.NAME, languages: [{ id: 'en', name: 'English' }] });
         }}
+        enablePointerInteraction={true}
+        animateIn={true}
       />
 
       {selectedCountry && (

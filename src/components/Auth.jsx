@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { loginUser, registerUser } from '../services/api';
+import { loginUser, registerUser, getBiometricChallenge, verifyBiometric } from '../services/api';
 import { useNavigate } from 'react-router-dom';
+import { startAuthentication } from '@simplewebauthn/browser';
+
 const Auth = () => {
     const [isLogin, setIsLogin] = useState(true);
     const [uname, setUname] = useState('');
@@ -8,6 +10,34 @@ const Auth = () => {
     const [email, setEmail] = useState('');
     const [message, setMessage] = useState('');
     const navigate = useNavigate();
+
+    const handleBiometricLogin = async () => {
+        if (!uname) {
+            setMessage('Please enter your username first');
+            return;
+        }
+        try {
+            const challenge = await getBiometricChallenge(uname);
+            // In a real WebAuthn flow, the challenge would be a more complex object
+            // This is a simplified demo of the interaction
+            const authResponse = await startAuthentication({
+                challenge: challenge,
+                allowCredentials: [],
+                userVerification: 'required',
+            });
+            
+            const res = await verifyBiometric(uname, authResponse);
+            setMessage(res);
+            if (res === 'Login successful') {
+                localStorage.setItem('username', uname);
+                window.location.href = '/dashboard';
+            }
+        } catch (error) {
+            console.error(error);
+            setMessage('Biometric login failed or not set up');
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
@@ -30,6 +60,7 @@ const Auth = () => {
             setMessage('Error: ' + error);
         }
     };
+
     return (
         <div className="flex flex-col items-center justify-center min-h-[70vh] px-4 animate-in fade-in zoom-in duration-500">
             <div className="p-8 bg-white/80 dark:bg-slate-800/80 backdrop-blur-2xl rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-md">
@@ -77,12 +108,25 @@ const Auth = () => {
                             required
                         />
                     </div>
-                    <button
-                        type="submit"
-                        className="w-full p-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-500/20 hover:scale-[1.02] transition-all active:scale-[0.98]"
-                    >
-                        {isLogin ? 'Sign In' : 'Sign Up'}
-                    </button>
+                    <div className="space-y-3">
+                        <button
+                            type="submit"
+                            className="w-full p-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-500/20 hover:scale-[1.02] transition-all active:scale-[0.98]"
+                        >
+                            {isLogin ? 'Sign In' : 'Sign Up'}
+                        </button>
+                        
+                        {isLogin && (
+                            <button
+                                type="button"
+                                onClick={handleBiometricLogin}
+                                className="w-full p-4 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 rounded-2xl font-bold border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
+                            >
+                                <span className="text-xl">🫵</span>
+                                Face / Fingerprint Login
+                            </button>
+                        )}
+                    </div>
                 </form>
                 {message && (
                     <div className={`mt-6 p-4 rounded-xl text-sm font-medium text-center

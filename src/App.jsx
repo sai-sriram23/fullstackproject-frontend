@@ -8,10 +8,13 @@ import Models from './components/ModelManager';
 import CameraTranslator from './components/CameraTranslator';
 import Home from './components/Home';
 import Layout from './components/Layout';
+import { Analytics } from '@vercel/analytics/react';
+
 const App = () => {
   const isAuthenticated = !!localStorage.getItem('username');
   return (
     <Router>
+      <Analytics />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/auth" element={<Auth />} />

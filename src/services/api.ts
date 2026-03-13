@@ -36,21 +36,6 @@ export const loginUser = async (user: any) => {
     const response = await api.post('/api/auth/login', payload);
     return response.data.message;
 };
-
-export const getBiometricChallenge = async (username: string) => {
-    const response = await api.get('/api/auth/biometric/challenge', {
-        params: { username }
-    });
-    return response.data.challenge;
-};
-
-export const verifyBiometric = async (username: string, responseData: any) => {
-    const response = await api.post('/api/auth/biometric/verify', {
-        username,
-        response: JSON.stringify(responseData)
-    });
-    return response.data.message;
-};
 export const saveHistory = async (history: any) => {
     const response = await api.post('/api/history/save', history);
     return response.data;

@@ -38,7 +38,51 @@ const GlobeSelector = ({ onSelectLanguage, currentLanguage }) => {
     'CHE': {
       name: 'Switzerland',
       languages: [{ id: 'de', name: 'German' }, { id: 'fr', name: 'French' }, { id: 'it', name: 'Italian' }]
-    }
+    },
+    // South America
+    'BRA': { name: 'Brazil', languages: [{ id: 'pt', name: 'Portuguese' }] },
+    'ARG': { name: 'Argentina', languages: [{ id: 'es', name: 'Spanish' }] },
+    'COL': { name: 'Colombia', languages: [{ id: 'es', name: 'Spanish' }] },
+    'CHL': { name: 'Chile', languages: [{ id: 'es', name: 'Spanish' }] },
+    'PER': { name: 'Peru', languages: [{ id: 'es', name: 'Spanish' }] },
+    'VEN': { name: 'Venezuela', languages: [{ id: 'es', name: 'Spanish' }] },
+    'ECU': { name: 'Ecuador', languages: [{ id: 'es', name: 'Spanish' }] },
+    'BOL': { name: 'Bolivia', languages: [{ id: 'es', name: 'Spanish' }] },
+    'PRY': { name: 'Paraguay', languages: [{ id: 'es', name: 'Spanish' }] },
+    'URY': { name: 'Uruguay', languages: [{ id: 'es', name: 'Spanish' }] },
+    'GUY': { name: 'Guyana', languages: [{ id: 'en', name: 'English' }] },
+    'SUR': { name: 'Suriname', languages: [{ id: 'nl', name: 'Dutch' }] },
+    // Europe
+    'FRA': { name: 'France', languages: [{ id: 'fr', name: 'French' }] },
+    'DEU': { name: 'Germany', languages: [{ id: 'de', name: 'German' }] },
+    'ESP': { name: 'Spain', languages: [{ id: 'es', name: 'Spanish' }, { id: 'ca', name: 'Catalan' }, { id: 'gl', name: 'Galician' }, { id: 'eu', name: 'Basque' }] },
+    'ITA': { name: 'Italy', languages: [{ id: 'it', name: 'Italian' }] },
+    'GBR': { name: 'United Kingdom', languages: [{ id: 'en', name: 'English' }, { id: 'cy', name: 'Welsh' }, { id: 'ga', name: 'Irish' }] },
+    'IRL': { name: 'Ireland', languages: [{ id: 'ga', name: 'Irish' }, { id: 'en', name: 'English' }] },
+    'ISL': { name: 'Iceland', languages: [{ id: 'is', name: 'Icelandic' }] },
+    'PRT': { name: 'Portugal', languages: [{ id: 'pt', name: 'Portuguese' }] },
+    'NLD': { name: 'Netherlands', languages: [{ id: 'nl', name: 'Dutch' }] },
+    'POL': { name: 'Poland', languages: [{ id: 'pl', name: 'Polish' }] },
+    'SWE': { name: 'Sweden', languages: [{ id: 'sv', name: 'Swedish' }] },
+    'NOR': { name: 'Norway', languages: [{ id: 'no', name: 'Norwegian' }] },
+    'DNK': { name: 'Denmark', languages: [{ id: 'da', name: 'Danish' }] },
+    'FIN': { name: 'Finland', languages: [{ id: 'fi', name: 'Finnish' }] },
+    'GRC': { name: 'Greece', languages: [{ id: 'el', name: 'Greek' }] },
+    'RUS': { name: 'Russia', languages: [{ id: 'ru', name: 'Russian' }] },
+    'BEL': { name: 'Belgium', languages: [{ id: 'nl', name: 'Dutch' }, { id: 'fr', name: 'French' }, { id: 'de', name: 'German' }] },
+    'AUT': { name: 'Austria', languages: [{ id: 'de', name: 'German' }] },
+    'UKR': { name: 'Ukraine', languages: [{ id: 'uk', name: 'Ukrainian' }, { id: 'ru', name: 'Russian' }] },
+    'CZE': { name: 'Czechia', languages: [{ id: 'cs', name: 'Czech' }] },
+    'HUN': { name: 'Hungary', languages: [{ id: 'hu', name: 'Hungarian' }] },
+    'ROU': { name: 'Romania', languages: [{ id: 'ro', name: 'Romanian' }] },
+    'BGR': { name: 'Bulgaria', languages: [{ id: 'bg', name: 'Bulgarian' }] },
+    'HRV': { name: 'Croatia', languages: [{ id: 'hr', name: 'Croatian' }] },
+    'SRB': { name: 'Serbia', languages: [{ id: 'sr', name: 'Serbian' }] },
+    // Asia/Others
+    'CHN': { name: 'China', languages: [{ id: 'zh-CN', name: 'Chinese (Simplified)' }] },
+    'JPN': { name: 'Japan', languages: [{ id: 'ja', name: 'Japanese' }] },
+    'KOR': { name: 'South Korea', languages: [{ id: 'ko', name: 'Korean' }] },
+    'TUR': { name: 'Turkey', languages: [{ id: 'tr', name: 'Turkish' }] },
   };
 
   return (
@@ -113,19 +157,24 @@ const GlobeSelector = ({ onSelectLanguage, currentLanguage }) => {
           </div>
         </div>
       )}
-      <div className="absolute bottom-8 right-8 z-20 flex gap-4">
-        <button 
-          onClick={() => globeEl.current.pointOfView({ lat: 20, lng: 78, altitude: 2 }, 1000)}
-          className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition-all border border-white/10 backdrop-blur-md"
-        >
-          Focus South Asia
-        </button>
-        <button 
-          onClick={() => globeEl.current.pointOfView({ lat: 46, lng: 8, altitude: 2 }, 1000)}
-          className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition-all border border-white/10 backdrop-blur-md"
-        >
-          Focus Europe
-        </button>
+      <div className="absolute bottom-8 left-8 right-8 z-20 flex flex-wrap gap-2 justify-center">
+        {[
+          { name: 'North America', coords: { lat: 37, lng: -95, altitude: 2 } },
+          { name: 'South America', coords: { lat: -15, lng: -60, altitude: 2 } },
+          { name: 'Europe', coords: { lat: 46, lng: 8, altitude: 2 } },
+          { name: 'Africa', coords: { lat: 5, lng: 20, altitude: 2.5 } },
+          { name: 'Asia', coords: { lat: 35, lng: 105, altitude: 2.5 } },
+          { name: 'Oceania', coords: { lat: -25, lng: 135, altitude: 2 } },
+          { name: 'Antarctica', coords: { lat: -90, lng: 0, altitude: 2.5 } }
+        ].map(continent => (
+          <button 
+            key={continent.name}
+            onClick={() => globeEl.current.pointOfView(continent.coords, 1000)}
+            className="px-4 py-2 bg-white/10 hover:bg-blue-600/40 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border border-white/10 backdrop-blur-md hover:scale-105 active:scale-95 shadow-lg"
+          >
+            {continent.name}
+          </button>
+        ))}
       </div>
     </div>
   );

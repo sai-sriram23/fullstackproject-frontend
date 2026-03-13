@@ -1,42 +1,26 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// phrasebook.ts — Pre-verified translations for common short phrases.
-// The NLLB-200 AI model often produces wrong/formal translations for very short
-// inputs like "hello" because it lacks context. This phrasebook bypasses the
-// model for known phrases and returns guaranteed-correct translations instantly.
-// ─────────────────────────────────────────────────────────────────────────────
-
-// Structure: PHRASEBOOK[normalised_english_phrase][NLLB_target_language_code] = translation
-// Record<K, V> is a TypeScript utility type meaning "an object whose keys are K and values are V".
-// Record<string, Record<string, string>> = { phrase: { langCode: translation } }
 export const PHRASEBOOK: Record<string, Record<string, string>> = {
-
-    // ── Greetings ─────────────────────────────────────────────────────────────
-
-    // "hello" — most misused word by NLLB. It was producing "Je vous salue" (I salute you).
     'hello': {
-        fra_Latn: 'Bonjour',          // French — standard greeting
-        spa_Latn: 'Hola',             // Spanish
-        deu_Latn: 'Hallo',            // German
-        hin_Deva: 'नमस्ते',            // Hindi — traditional greeting in Devanagari script
-        zho_Hans: '你好',              // Simplified Chinese — nǐ hǎo (you good)
-        jpn_Jpan: 'こんにちは',         // Japanese — konnichiwa
-        kor_Hang: '안녕하세요',          // Korean — annyeonghaseyo
-        rus_Cyrl: 'Привет',            // Russian — privet (informal hello)
-        arb_Arab: 'مرحبا',             // Arabic — marhaba
-        por_Latn: 'Olá',              // Portuguese
-        ita_Latn: 'Ciao',             // Italian
-        ben_Beng: 'হ্যালো',            // Bengali
-        tel_Telu: 'హలో',              // Telugu
-        mar_Deva: 'नमस्कार',           // Marathi
-        tam_Taml: 'ஹலோ',             // Tamil
-        urd_Arab: 'ہیلو',              // Urdu
-        mal_Mlym: 'ഹലോ',             // Malayalam
-        kan_Knda: 'ಹಲೋ',             // Kannada
-        pan_Guru: 'ਹੈਲੋ',             // Punjabi — Gurmukhi script
-        vie_Latn: 'Xin chào',         // Vietnamese
+        fra_Latn: 'Bonjour',
+        spa_Latn: 'Hola',
+        deu_Latn: 'Hallo',
+        hin_Deva: 'नमस्ते',
+        zho_Hans: '你好',
+        jpn_Jpan: 'こんにちは',
+        kor_Hang: '안녕하세요',
+        rus_Cyrl: 'Привет',
+        arb_Arab: 'مرحبا',
+        por_Latn: 'Olá',
+        ita_Latn: 'Ciao',
+        ben_Beng: 'হ্যালো',
+        tel_Telu: 'హలో',
+        mar_Deva: 'नमस्कार',
+        tam_Taml: 'ஹலோ',
+        urd_Arab: 'ہیلو',
+        mal_Mlym: 'ഹലോ',
+        kan_Knda: 'ಹಲೋ',
+        pan_Guru: 'ਹੈਲੋ',
+        vie_Latn: 'Xin chào',
     },
-
-    // "hi" — casual version of hello
     'hi': {
         fra_Latn: 'Salut', spa_Latn: 'Hola', deu_Latn: 'Hi',
         hin_Deva: 'हाय', zho_Hans: '嗨', jpn_Jpan: 'やあ',
@@ -46,8 +30,6 @@ export const PHRASEBOOK: Record<string, Record<string, string>> = {
         urd_Arab: 'ہائے', mal_Mlym: 'ഹായ്', kan_Knda: 'ಹಾಯ್',
         pan_Guru: 'ਹਾਏ', vie_Latn: 'Chào',
     },
-
-    // "goodbye" — formal farewell
     'goodbye': {
         fra_Latn: 'Au revoir', spa_Latn: 'Adiós', deu_Latn: 'Auf Wiedersehen',
         hin_Deva: 'अलविदा', zho_Hans: '再见', jpn_Jpan: 'さようなら',
@@ -57,8 +39,6 @@ export const PHRASEBOOK: Record<string, Record<string, string>> = {
         urd_Arab: 'خدا حافظ', mal_Mlym: 'വിട', kan_Knda: 'ವಿದಾಯ',
         pan_Guru: 'ਵਿਦਾ', vie_Latn: 'Tạm biệt',
     },
-
-    // "bye" — informal farewell
     'bye': {
         fra_Latn: 'Au revoir', spa_Latn: 'Adiós', deu_Latn: 'Tschüss',
         hin_Deva: 'अलविदा', zho_Hans: '拜拜', jpn_Jpan: 'バイバイ',
@@ -68,8 +48,6 @@ export const PHRASEBOOK: Record<string, Record<string, string>> = {
         urd_Arab: 'بائے', mal_Mlym: 'ബൈ', kan_Knda: 'ಬೈ',
         pan_Guru: 'ਬਾਏ', vie_Latn: 'Bye',
     },
-
-    // "good morning" — early day greeting
     'good morning': {
         fra_Latn: 'Bonjour', spa_Latn: 'Buenos días', deu_Latn: 'Guten Morgen',
         hin_Deva: 'सुप्रभात', zho_Hans: '早上好', jpn_Jpan: 'おはようございます',
@@ -79,8 +57,6 @@ export const PHRASEBOOK: Record<string, Record<string, string>> = {
         urd_Arab: 'صبح بخیر', mal_Mlym: 'സുപ്രഭാതം', kan_Knda: 'ಶುಭೋದಯ',
         pan_Guru: 'ਸ਼ੁਭ ਸਵੇਰ', vie_Latn: 'Chào buổi sáng',
     },
-
-    // "good night" — bedtime farewell
     'good night': {
         fra_Latn: 'Bonne nuit', spa_Latn: 'Buenas noches', deu_Latn: 'Gute Nacht',
         hin_Deva: 'शुभ रात्रि', zho_Hans: '晚安', jpn_Jpan: 'おやすみなさい',
@@ -90,9 +66,6 @@ export const PHRASEBOOK: Record<string, Record<string, string>> = {
         urd_Arab: 'شب بخیر', mal_Mlym: 'ശുഭ രാത്രി', kan_Knda: 'ಶುಭ ರಾತ್ರಿ',
         pan_Guru: 'ਸ਼ੁਭ ਰਾਤ', vie_Latn: 'Chúc ngủ ngon',
     },
-
-    // ── Courtesy phrases ──────────────────────────────────────────────────────
-
     'thank you': {
         fra_Latn: 'Merci', spa_Latn: 'Gracias', deu_Latn: 'Danke',
         hin_Deva: 'धन्यवाद', zho_Hans: '谢谢', jpn_Jpan: 'ありがとうございます',
@@ -102,7 +75,6 @@ export const PHRASEBOOK: Record<string, Record<string, string>> = {
         urd_Arab: 'شکریہ', mal_Mlym: 'നന്ദി', kan_Knda: 'ಧನ್ಯವಾದ',
         pan_Guru: 'ਧੰਨਵਾਦ', vie_Latn: 'Cảm ơn',
     },
-
     'thanks': {
         fra_Latn: 'Merci', spa_Latn: 'Gracias', deu_Latn: 'Danke',
         hin_Deva: 'शुक्रिया', zho_Hans: '谢谢', jpn_Jpan: 'ありがとう',
@@ -112,7 +84,6 @@ export const PHRASEBOOK: Record<string, Record<string, string>> = {
         urd_Arab: 'شکریہ', mal_Mlym: 'നന്ദി', kan_Knda: 'ಧನ್ಯವಾದ',
         pan_Guru: 'ਧੰਨਵਾਦ', vie_Latn: 'Cảm ơn',
     },
-
     'please': {
         fra_Latn: "S'il vous plaît", spa_Latn: 'Por favor', deu_Latn: 'Bitte',
         hin_Deva: 'कृपया', zho_Hans: '请', jpn_Jpan: 'お願いします',
@@ -122,7 +93,6 @@ export const PHRASEBOOK: Record<string, Record<string, string>> = {
         urd_Arab: 'براہ کرم', mal_Mlym: 'ദയവായി', kan_Knda: 'ದಯವಿಟ್ಟು',
         pan_Guru: 'ਕਿਰਪਾ ਕਰਕੇ', vie_Latn: 'Làm ơn',
     },
-
     'sorry': {
         fra_Latn: 'Désolé', spa_Latn: 'Lo siento', deu_Latn: 'Entschuldigung',
         hin_Deva: 'माफ़ करें', zho_Hans: '对不起', jpn_Jpan: 'すみません',
@@ -132,7 +102,6 @@ export const PHRASEBOOK: Record<string, Record<string, string>> = {
         urd_Arab: 'معاف کریں', mal_Mlym: 'ക്ഷമിക്കൂ', kan_Knda: 'ಕ್ಷಮಿಸಿ',
         pan_Guru: 'ਮਾਫ਼ ਕਰਨਾ', vie_Latn: 'Xin lỗi',
     },
-
     'yes': {
         fra_Latn: 'Oui', spa_Latn: 'Sí', deu_Latn: 'Ja',
         hin_Deva: 'हाँ', zho_Hans: '是', jpn_Jpan: 'はい',
@@ -142,7 +111,6 @@ export const PHRASEBOOK: Record<string, Record<string, string>> = {
         urd_Arab: 'ہاں', mal_Mlym: 'അതെ', kan_Knda: 'ಹೌದು',
         pan_Guru: 'ਹਾਂ', vie_Latn: 'Có',
     },
-
     'no': {
         fra_Latn: 'Non', spa_Latn: 'No', deu_Latn: 'Nein',
         hin_Deva: 'नहीं', zho_Hans: '不', jpn_Jpan: 'いいえ',
@@ -152,7 +120,6 @@ export const PHRASEBOOK: Record<string, Record<string, string>> = {
         urd_Arab: 'نہیں', mal_Mlym: 'ഇല്ല', kan_Knda: 'ಇಲ್ಲ',
         pan_Guru: 'ਨਹੀਂ', vie_Latn: 'Không',
     },
-
     'i love you': {
         fra_Latn: "Je t'aime", spa_Latn: 'Te amo', deu_Latn: 'Ich liebe dich',
         hin_Deva: 'मैं तुमसे प्यार करता हूँ', zho_Hans: '我爱你', jpn_Jpan: '愛しています',
@@ -163,7 +130,6 @@ export const PHRASEBOOK: Record<string, Record<string, string>> = {
         mal_Mlym: 'ഞാൻ നിന്നെ സ്നേഹിക്കുന്നു', kan_Knda: 'ನಾನು ನಿನ್ನನ್ನು ಪ್ರೀತಿಸುತ್ತೇನೆ',
         pan_Guru: 'ਮੈਂ ਤੁਹਾਨੂੰ ਪਿਆਰ ਕਰਦਾ ਹਾਂ', vie_Latn: 'Tôi yêu bạn',
     },
-
     'how are you': {
         fra_Latn: 'Comment allez-vous ?', spa_Latn: '¿Cómo estás?', deu_Latn: 'Wie geht es Ihnen?',
         hin_Deva: 'आप कैसे हैं?', zho_Hans: '你好吗?', jpn_Jpan: 'お元気ですか？',
@@ -173,7 +139,6 @@ export const PHRASEBOOK: Record<string, Record<string, string>> = {
         urd_Arab: 'آپ کیسے ہیں؟', mal_Mlym: 'നിങ്ങൾക്ക് എങ്ങനെ ഉണ്ട്?', kan_Knda: 'ನೀವು ಹೇಗಿದ್ದೀರಿ?',
         pan_Guru: 'ਤੁਸੀਂ ਕਿਵੇਂ ਹੋ?', vie_Latn: 'Bạn có khỏe không?',
     },
-
     'what is your name': {
         fra_Latn: 'Comment vous appelez-vous ?', spa_Latn: '¿Cómo te llamas?',
         deu_Latn: 'Wie heißen Sie?', hin_Deva: 'आपका नाम क्या है?',
@@ -186,10 +151,6 @@ export const PHRASEBOOK: Record<string, Record<string, string>> = {
         mal_Mlym: 'നിങ്ങളുടെ പേര് എന്താണ്?', kan_Knda: 'ನಿಮ್ಮ ಹೆಸರೇನು?',
         pan_Guru: 'ਤੁਹਾਡਾ ਨਾਮ ਕੀ ਹੈ?', vie_Latn: 'Tên bạn là gì?',
     },
-
-    // "you are welcome" — polite response to "thank you".
-    // NLLB was producing "Je vous en prie" which literally means "I beg you" (archaic).
-    // Correct modern French is "De rien" (it's nothing).
     'you are welcome': {
         fra_Latn: 'De rien', spa_Latn: 'De nada', deu_Latn: 'Bitte sehr',
         hin_Deva: 'आपका स्वागत है', zho_Hans: '不客气', jpn_Jpan: 'どういたしまして',
@@ -200,29 +161,13 @@ export const PHRASEBOOK: Record<string, Record<string, string>> = {
         pan_Guru: 'ਜੀ ਆਇਆਂ ਨੂੰ', vie_Latn: 'Không có gì',
     },
 };
-
-// ── Phrasebook lookup function ─────────────────────────────────────────────────
-// This is called by worker.ts BEFORE sending text to the NLLB AI model.
-// If the phrase is found, we return the correct translation immediately.
-// If not found, we return null and the code falls through to the AI model.
 export const lookupPhrase = (
-    text: string,       // the chunk of text to translate (could be "hello" or a long paragraph)
-    src_lang: string,   // NLLB source language code (only applied if 'eng_Latn')
-    tgt_lang: string    // NLLB target language code (e.g. 'fra_Latn')
+    text: string,
+    src_lang: string,
+    tgt_lang: string
 ): string | null => {
-    // Only apply the phrasebook when translating FROM English.
-    // We don't have phrasebooks for other source languages (would need a full multilingual table).
     if (src_lang !== 'eng_Latn') return null;
-
-    // Normalise the input for lookup:
-    // .trim() — removes leading/trailing whitespace
-    // .toLowerCase() — makes it case-insensitive ("Hello" matches "hello")
-    // .replace(/[?.!,]+$/, '') — strips trailing punctuation ("hello!" → "hello")
-    // .trim() again — handles "hello !  " → "hello"
     const key = text.trim().toLowerCase().replace(/[?.!,]+$/, '').trim();
-
-    // ?? is the "nullish coalescing operator".
-    // PHRASEBOOK[key]?.[tgt_lang] safely accesses the nested object.
-    // Returns the translation if found, or null if either key doesn't exist.
     return PHRASEBOOK[key]?.[tgt_lang] ?? null;
 };
+

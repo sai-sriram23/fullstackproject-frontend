@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { getHistory } from '../services/api';
-
 const timeAgo = (dateStr) => {
     if (!dateStr) return '';
     const diff = Date.now() - new Date(dateStr).getTime();
@@ -11,45 +10,37 @@ const timeAgo = (dateStr) => {
     if (hrs < 24) return `${hrs}h ago`;
     return `${Math.floor(hrs / 24)}d ago`;
 };
-
 const typeIcon = {
     TRANSLATE: '🌐',
     OCR: '📄',
     VOICE: '🎙️',
     CAMERA: '📸',
 };
-
 const ProfileCard = ({ username }) => {
     const joined = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     const initial = username.charAt(0).toUpperCase();
-
     return (
         <div className="relative overflow-hidden rounded-3xl p-8 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 text-white shadow-2xl shadow-blue-500/30">
             <div className="absolute -top-10 -right-10 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
             <div className="absolute -bottom-10 -left-10 w-36 h-36 bg-white/5 rounded-full blur-2xl pointer-events-none" />
-
             <div className="relative flex items-center gap-6">
                 <div className="w-20 h-20 rounded-2xl bg-white/20 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center text-4xl font-black shadow-xl flex-shrink-0">
                     {initial}
                 </div>
-
                 <div className="flex-1 min-w-0">
                     <p className="text-xs font-bold uppercase tracking-widest text-white/60 mb-1">Logged in as</p>
                     <h2 className="text-2xl font-black truncate">{username}</h2>
                     <p className="text-sm text-white/70 mt-0.5">Member since {joined}</p>
                 </div>
-
                 <div className="hidden sm:flex flex-col items-center justify-center w-20 h-20 bg-white/10 rounded-2xl backdrop-blur-sm border border-white/20 flex-shrink-0">
                     <span className="text-2xl font-black">AI</span>
                     <span className="text-[9px] font-bold uppercase tracking-widest text-white/60 mt-0.5">Console</span>
                 </div>
             </div>
-
-            <div className="relative mt-8 grid grid-cols-3 gap-4">
+            <div className="relative mt-8 grid grid-cols-2 gap-4">
                 {[
                     { label: 'Translations', icon: '🌐' },
                     { label: 'OCR Scans', icon: '📄' },
-                    { label: 'Voice Clips', icon: '🎙️' },
                 ].map(({ label, icon }) => (
                     <div key={label} className="bg-white/10 rounded-2xl p-4 text-center backdrop-blur-sm border border-white/10">
                         <p className="text-xl mb-1">{icon}</p>
@@ -60,7 +51,6 @@ const ProfileCard = ({ username }) => {
         </div>
     );
 };
-
 const RecentTranslations = ({ entries, loading }) => (
     <div className="bg-white dark:bg-slate-800/60 rounded-3xl border border-slate-200 dark:border-white/5 shadow-xl overflow-hidden">
         <div className="px-6 py-5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
@@ -70,7 +60,6 @@ const RecentTranslations = ({ entries, loading }) => (
             </div>
             <span className="text-2xl">⚡</span>
         </div>
-
         <div className="divide-y divide-slate-100 dark:divide-white/5">
             {loading ? (
                 Array.from({ length: 4 }).map((_, i) => (
@@ -116,12 +105,10 @@ const RecentTranslations = ({ entries, loading }) => (
         </div>
     </div>
 );
-
 const DownloadedPacks = () => {
     const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(true);
     const [clearing, setClearing] = useState(false);
-
     const loadCache = useCallback(async () => {
         setLoading(true);
         if (!('caches' in window)) { setLoading(false); return; }
@@ -139,13 +126,11 @@ const DownloadedPacks = () => {
                 }
             }
             setFiles(list);
-        } catch { /* ignore */ } finally {
+        } catch { } finally {
             setLoading(false);
         }
     }, []);
-
     useEffect(() => { loadCache(); }, [loadCache]);
-
     const handleClear = async () => {
         if (!window.confirm('Delete all cached model files? You will need to re-download them.')) return;
         setClearing(true);
@@ -154,7 +139,6 @@ const DownloadedPacks = () => {
         await loadCache();
         setClearing(false);
     };
-
     const modelMap = {};
     for (const f of files) {
         try {
@@ -167,7 +151,6 @@ const DownloadedPacks = () => {
             modelMap['other'].push(f);
         }
     }
-
     return (
         <div className="bg-white dark:bg-slate-800/60 rounded-3xl border border-slate-200 dark:border-white/5 shadow-xl overflow-hidden">
             <div className="px-6 py-5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
@@ -194,7 +177,6 @@ const DownloadedPacks = () => {
                     )}
                 </div>
             </div>
-
             <div className="p-6">
                 {loading ? (
                     <div className="space-y-3">
@@ -233,12 +215,10 @@ const DownloadedPacks = () => {
         </div>
     );
 };
-
 const Dashboard = () => {
     const username = localStorage.getItem('username') || 'Guest';
     const [history, setHistory] = useState([]);
     const [historyLoading, setHistoryLoading] = useState(true);
-
     useEffect(() => {
         if (username === 'Guest') { setHistoryLoading(false); return; }
         getHistory(username)
@@ -246,7 +226,6 @@ const Dashboard = () => {
             .catch(() => setHistory([]))
             .finally(() => setHistoryLoading(false));
     }, [username]);
-
     return (
         <div className="max-w-6xl mx-auto px-4 py-8 space-y-8 animate-in fade-in duration-700">
             <div>
@@ -255,9 +234,7 @@ const Dashboard = () => {
                 </h1>
                 <p className="text-slate-400 mt-1">Welcome back, <span className="font-semibold text-slate-600 dark:text-slate-300">{username}</span></p>
             </div>
-
             <ProfileCard username={username} />
-
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <RecentTranslations entries={history} loading={historyLoading} />
                 <DownloadedPacks />
@@ -265,5 +242,5 @@ const Dashboard = () => {
         </div>
     );
 };
-
 export default Dashboard;
+

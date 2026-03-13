@@ -1,10 +1,9 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Custom dark mode implementation for class-based toggling */
 @layer base {
   .dark {
     color-scheme: dark;
   }
 }
+

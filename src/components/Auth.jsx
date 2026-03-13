@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { loginUser, registerUser } from '../services/api';
 import { useNavigate } from 'react-router-dom';
-
 const Auth = () => {
     const [isLogin, setIsLogin] = useState(true);
     const [uname, setUname] = useState('');
@@ -9,15 +8,12 @@ const Auth = () => {
     const [email, setEmail] = useState('');
     const [message, setMessage] = useState('');
     const navigate = useNavigate();
-
     const handleSubmit = async (e) => {
         e.preventDefault();
-
         try {
             if (isLogin) {
                 const res = await loginUser({ uname, psw });
                 setMessage(res);
-
                 if (res === 'Login successful') {
                     localStorage.setItem('username', uname);
                     navigate('/translator');
@@ -33,7 +29,6 @@ const Auth = () => {
             setMessage('Error: ' + error);
         }
     };
-
     return (
         <div className="flex flex-col items-center justify-center min-h-[70vh] px-4 animate-in fade-in zoom-in duration-500">
             <div className="p-8 bg-white/80 dark:bg-slate-800/80 backdrop-blur-2xl rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-md">
@@ -45,7 +40,6 @@ const Auth = () => {
                         {isLogin ? 'Enter your credentials to continue' : 'Sign up to access AI features'}
                     </p>
                 </div>
-
                 <form onSubmit={handleSubmit} className="space-y-5">
                     <div>
                         <label className="block text-sm font-semibold mb-2 ml-1">Username</label>
@@ -58,7 +52,6 @@ const Auth = () => {
                             required
                         />
                     </div>
-
                     {!isLogin && (
                         <div className="animate-in slide-in-from-top-2 duration-300">
                             <label className="block text-sm font-semibold mb-2 ml-1">Email Address</label>
@@ -72,7 +65,6 @@ const Auth = () => {
                             />
                         </div>
                     )}
-
                     <div>
                         <label className="block text-sm font-semibold mb-2 ml-1">Password</label>
                         <input
@@ -84,7 +76,6 @@ const Auth = () => {
                             required
                         />
                     </div>
-
                     <button
                         type="submit"
                         className="w-full p-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-500/20 hover:scale-[1.02] transition-all active:scale-[0.98]"
@@ -92,14 +83,12 @@ const Auth = () => {
                         {isLogin ? 'Sign In' : 'Sign Up'}
                     </button>
                 </form>
-
                 {message && (
                     <div className={`mt-6 p-4 rounded-xl text-sm font-medium text-center
                         ${message.includes('success') ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
                         {message}
                     </div>
                 )}
-
                 <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700 text-center">
                     <p className="text-sm text-slate-500 dark:text-slate-400">
                         {isLogin ? "Don't have an account?" : "Already have an account?"}{' '}
@@ -115,5 +104,5 @@ const Auth = () => {
         </div>
     );
 };
-
 export default Auth;
+

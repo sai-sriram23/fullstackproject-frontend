@@ -3,7 +3,6 @@ import Tesseract from 'tesseract.js';
 import { saveHistory } from '../services/api';
 import { preprocessImageForOCR, cleanOCRText } from '../utils/imagePreprocessing';
 import { arrangeOCRText } from '../utils/ocrFormatter';
-
 const OCR = () => {
     const [image, setImage] = useState(null);
     const [text, setText] = useState('');
@@ -12,7 +11,6 @@ const OCR = () => {
     const [status, setStatus] = useState('');
     const [isFormatted, setIsFormatted] = useState(false);
     const [rawText, setRawText] = useState('');
-
     const handleImageUpload = (e) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
@@ -24,7 +22,6 @@ const OCR = () => {
             setStatus('');
         }
     };
-
     const handleOCR = async () => {
         if (!image) return;
         setLoading(true);
@@ -32,11 +29,9 @@ const OCR = () => {
         setRawText('');
         setIsFormatted(false);
         setProgress(0);
-
         try {
             setStatus('Optimizing image…');
             const processedImage = await preprocessImageForOCR(image);
-
             setStatus('Initializing Engine…');
             const result = await Tesseract.recognize(processedImage, 'eng', {
                 logger: (m) => {
@@ -46,12 +41,10 @@ const OCR = () => {
                     setStatus(m.status);
                 },
             });
-
             const cleanedText = cleanOCRText(result.data.text);
             setText(cleanedText);
             setRawText(cleanedText);
             setStatus('✅ Done');
-
             const username = localStorage.getItem('username') || 'anonymous';
             saveHistory({
                 username,
@@ -59,15 +52,12 @@ const OCR = () => {
                 sourceText: 'Image Upload',
                 resultText: cleanedText.substring(0, 100) + '...'
             }).catch(() => { });
-
         } catch (err) {
-            console.error(err);
             setStatus('❌ Error: ' + err);
         } finally {
             setLoading(false);
         }
     };
-
     const toggleSmartArrange = () => {
         if (!isFormatted) {
             const arranged = arrangeOCRText(rawText);
@@ -78,7 +68,6 @@ const OCR = () => {
             setIsFormatted(false);
         }
     };
-
     return (
         <div className="max-w-4xl mx-auto p-4 space-y-8 animate-in fade-in duration-700 pb-20">
             <div className="text-center space-y-2">
@@ -87,13 +76,11 @@ const OCR = () => {
                 </h1>
                 <p className="text-slate-500 dark:text-slate-400">Extract structured data from any image with local AI</p>
             </div>
-
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="space-y-6">
                     <label className="block group">
                         <div className={`relative aspect-[4/3] rounded-3xl border-2 border-dashed transition-all flex flex-col items-center justify-center p-6
                             ${image ? 'border-blue-500 bg-blue-50/10' : 'border-slate-300 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-slate-50 dark:hover:bg-slate-900/50'}`}>
-                            
                             {image ? (
                                 <img src={image} alt="Upload" className="w-full h-full object-contain rounded-xl" />
                             ) : (
@@ -106,7 +93,6 @@ const OCR = () => {
                         </div>
                         <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
                     </label>
-
                     <button
                         onClick={handleOCR}
                         disabled={!image || loading}
@@ -125,7 +111,6 @@ const OCR = () => {
                         )}
                     </button>
                 </div>
-
                 <div className="space-y-4">
                     <div className="h-full bg-white dark:bg-slate-800 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden">
                         <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700/50 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/20">
@@ -145,7 +130,6 @@ const OCR = () => {
                                 <div className="w-2 h-2 rounded-full bg-green-400"></div>
                             </div>
                         </div>
-
                         <div className="flex-1 p-8 overflow-y-auto relative">
                             {loading && (
                                 <div className="absolute inset-0 bg-white/60 dark:bg-slate-800/60 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center p-8 animate-in fade-in">
@@ -156,7 +140,6 @@ const OCR = () => {
                                     <p className="text-[10px] text-slate-400 mt-2 font-bold">{progress}% COMPLETED</p>
                                 </div>
                             )}
-
                             {text ? (
                                 <div className="prose dark:prose-invert max-w-none">
                                     <p className="text-lg leading-relaxed whitespace-pre-wrap selection:bg-blue-500/30">
@@ -173,7 +156,6 @@ const OCR = () => {
                     </div>
                 </div>
             </div>
-
             <div className="px-8 py-6 bg-indigo-500/5 border border-indigo-500/10 rounded-3xl flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-xl shadow-inner">💡</div>
@@ -189,5 +171,5 @@ const OCR = () => {
         </div>
     );
 };
-
 export default OCR;
+

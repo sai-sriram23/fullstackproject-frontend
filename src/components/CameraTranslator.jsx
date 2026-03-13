@@ -3,7 +3,6 @@ import Tesseract from 'tesseract.js';
 import { saveHistory } from '../services/api';
 import { languages } from '../constants/languages';
 import { preprocessImageForOCR, cleanOCRText } from '../utils/imagePreprocessing';
-
 const CameraTranslator = () => {
     const [inputMode, setInputMode] = useState('camera');
     const [image, setImage] = useState(null);
@@ -17,21 +16,17 @@ const CameraTranslator = () => {
     const [camActive, setCamActive] = useState(false);
     const [camError, setCamError] = useState('');
     const [facingMode, setFacingMode] = useState('environment');
-
     const worker = useRef(null);
     const ocrRef = useRef('');
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
     const streamRef = useRef(null);
     const fileInputRef = useRef(null);
-
     useEffect(() => { ocrRef.current = ocrText; }, [ocrText]);
-
     useEffect(() => {
         if (!worker.current) {
             worker.current = new Worker(new URL('../worker.ts', import.meta.url), { type: 'module' });
         }
-
         const onMsg = (e) => {
             const { status: s, output, error } = e.data;
             if (s === 'progress') {
@@ -42,7 +37,6 @@ const CameraTranslator = () => {
                 setTransProgress(null);
                 setIsLoading(false);
                 setStatus('✅ Done');
-
                 const username = localStorage.getItem('username') || 'anonymous';
                 saveHistory({ username, type: 'CAMERA_TRANSLATE', sourceText: ocrRef.current, resultText: translated })
                     .catch(() => { });
@@ -51,21 +45,17 @@ const CameraTranslator = () => {
                 setIsLoading(false);
             }
         };
-
         worker.current.addEventListener('message', onMsg);
         return () => worker.current?.removeEventListener('message', onMsg);
     }, []);
-
     const stopCamera = useCallback(() => {
         streamRef.current?.getTracks().forEach(t => t.stop());
         streamRef.current = null;
         setCamActive(false);
     }, []);
-
     const startCamera = useCallback(async () => {
         setCamError('');
         stopCamera();
-
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: {
@@ -75,9 +65,7 @@ const CameraTranslator = () => {
                 },
                 audio: false,
             });
-
             streamRef.current = stream;
-
             if (videoRef.current) {
                 videoRef.current.srcObject = stream;
                 videoRef.current.play();
@@ -92,34 +80,26 @@ const CameraTranslator = () => {
             setCamError(msg);
         }
     }, [facingMode, stopCamera]);
-
     useEffect(() => {
         if (camActive) startCamera();
     }, [facingMode]);
-
     useEffect(() => () => stopCamera(), [stopCamera]);
-
     useEffect(() => {
         if (inputMode === 'upload') stopCamera();
     }, [inputMode, stopCamera]);
-
     const captureFrame = useCallback(() => {
         const video = videoRef.current;
         const canvas = canvasRef.current;
         if (!video || !canvas) return;
-
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         canvas.getContext('2d').drawImage(video, 0, 0);
-
         const dataUrl = canvas.toDataURL('image/png');
         setImage(dataUrl);
-
         setOcrText('');
         setTranslatedText('');
         setStatus('');
     }, []);
-
     const handleFileChange = (e) => {
         if (e.target.files?.[0]) {
             setImage(URL.createObjectURL(e.target.files[0]));
@@ -128,7 +108,6 @@ const CameraTranslator = () => {
             setStatus('');
         }
     };
-
     const processImage = async () => {
         if (!image) return;
         setIsLoading(true);
@@ -136,11 +115,9 @@ const CameraTranslator = () => {
         setTransProgress(null);
         setOcrText('');
         setTranslatedText('');
-
         try {
             setStatus('Optimising image…');
             const processed = await preprocessImageForOCR(image);
-
             setStatus('Extracting text (OCR)…');
             const result = await Tesseract.recognize(processed, 'eng', {
                 logger: (m) => {
@@ -148,16 +125,13 @@ const CameraTranslator = () => {
                     setStatus(m.status);
                 },
             });
-
             const text = cleanOCRText(result.data.text);
             setOcrText(text);
-
             if (!text) {
                 setStatus('No readable text found in image.');
                 setIsLoading(false);
                 return;
             }
-
             setStatus('Translating…');
             worker.current?.postMessage({ text, src_lang: 'eng_Latn', tgt_lang: tgtLang });
         } catch (err) {
@@ -165,9 +139,7 @@ const CameraTranslator = () => {
             setIsLoading(false);
         }
     };
-
     const progressVal = ocrProgress || (transProgress?.progress * 100) || 0;
-
     return (
         <div className="max-w-5xl mx-auto px-4 py-8 space-y-8 animate-in fade-in duration-700 pb-24">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -185,7 +157,6 @@ const CameraTranslator = () => {
                     </select>
                 </div>
             </div>
-
             <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl w-fit">
                 {['camera', 'upload'].map(m => (
                     <button key={m} onClick={() => setInputMode(m)}
@@ -196,7 +167,6 @@ const CameraTranslator = () => {
                     </button>
                 ))}
             </div>
-
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="space-y-4">
                     {inputMode === 'camera' ? (
@@ -255,7 +225,6 @@ const CameraTranslator = () => {
                                 onChange={handleFileChange} className="hidden" />
                         </label>
                     )}
-
                     {image && (
                         <div className="space-y-3 animate-in slide-in-from-bottom-2 duration-400">
                             <img src={image} alt="Captured"
@@ -269,7 +238,6 @@ const CameraTranslator = () => {
                         </div>
                     )}
                 </div>
-
                 <div className="space-y-6">
                     {isLoading && (
                         <div className="p-6 bg-blue-500/10 border border-blue-500/20 rounded-3xl">
@@ -281,7 +249,6 @@ const CameraTranslator = () => {
                             <p className="text-right text-xs text-slate-400 mt-1">{Math.round(progressVal)}%</p>
                         </div>
                     )}
-
                     {ocrText && (
                         <ResultCard icon="📄" title="Extracted Text" text={ocrText} color="slate" />
                     )}
@@ -293,7 +260,6 @@ const CameraTranslator = () => {
                             color="indigo"
                         />
                     )}
-
                     {!ocrText && !translatedText && !isLoading && (
                         <div className="h-64 flex flex-col items-center justify-center text-slate-200 dark:text-slate-800 border-2 border-dashed border-slate-100 dark:border-slate-900 rounded-3xl">
                             <span className="text-6xl mb-3">🔍</span>
@@ -305,7 +271,6 @@ const CameraTranslator = () => {
         </div>
     );
 };
-
 const ResultCard = ({ icon, title, text, color }) => (
     <div className={`p-6 bg-white dark:bg-slate-800/60 rounded-3xl shadow-xl border
         ${color === 'indigo' ? 'border-indigo-500/20' : 'border-slate-200 dark:border-slate-700'}
@@ -319,5 +284,5 @@ const ResultCard = ({ icon, title, text, color }) => (
         <p className="text-base leading-relaxed text-slate-700 dark:text-slate-200">{text}</p>
     </div>
 );
-
 export default CameraTranslator;
+

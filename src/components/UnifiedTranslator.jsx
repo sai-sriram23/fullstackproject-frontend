@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { languages } from '../constants/languages';
 import { saveHistory } from '../services/api';
-
 const Translator = () => {
     const [mode, setMode] = useState('text-to-text');
     const [inputText, setInputText] = useState('');
@@ -11,16 +10,13 @@ const Translator = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [progress, setProgress] = useState(null);
     const [isRecording, setIsRecording] = useState(false);
-    
     const worker = useRef(null);
     const recognition = useRef(null);
     const synthesis = useRef(window.speechSynthesis);
-
     useEffect(() => {
         if (!worker.current) {
             worker.current = new Worker(new URL('../worker.ts', import.meta.url), { type: 'module' });
         }
-
         const onMessage = (e) => {
             const { status, output, error } = e.data;
             if (status === 'initiate') {
@@ -32,11 +28,9 @@ const Translator = () => {
                 const translated = output[0].translation_text;
                 setOutputText(translated);
                 setProgress(null);
-                
                 if (mode === 'text-to-speech' || mode === 'speech-to-speech') {
                     speak(translated, tgtLang);
                 }
-
                 const username = localStorage.getItem('username') || 'Guest';
                 saveHistory({
                     username,
@@ -46,32 +40,26 @@ const Translator = () => {
                 }).catch(() => {});
             } else if (status === 'error') {
                 setIsLoading(false);
-                setStatus('Translation Error');
             }
         };
-
         worker.current.addEventListener('message', onMessage);
         return () => worker.current?.removeEventListener('message', onMessage);
     }, [mode, inputText, tgtLang]);
-
     useEffect(() => {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognition) {
             recognition.current = new SpeechRecognition();
             recognition.current.continuous = false;
             recognition.current.interimResults = false;
-
             recognition.current.onresult = (event) => {
                 const transcript = event.results[0][0].transcript;
                 setInputText(transcript);
                 setIsRecording(false);
             };
-
             recognition.current.onerror = () => setIsRecording(false);
             recognition.current.onend = () => setIsRecording(false);
         }
     }, []);
-
     const speak = (text, langCode) => {
         if (!synthesis.current) return;
         synthesis.current.cancel();
@@ -82,7 +70,6 @@ const Translator = () => {
         if (voice) utterance.voice = voice;
         synthesis.current.speak(utterance);
     };
-
     const handleTranslate = () => {
         if (!worker.current || !inputText.trim()) return;
         setIsLoading(true);
@@ -93,7 +80,6 @@ const Translator = () => {
             tgt_lang: tgtLang
         });
     };
-
     const toggleRecording = () => {
         if (isRecording) {
             recognition.current?.stop();
@@ -104,14 +90,12 @@ const Translator = () => {
             setIsRecording(true);
         }
     };
-
     const modes = [
         { id: 'text-to-text', label: 'Text', icon: '📝' },
         { id: 'text-to-speech', label: 'Listen', icon: '🔊' },
         { id: 'speech-to-text', label: 'Dictate', icon: '🎙️' },
         { id: 'speech-to-speech', label: 'Voice Pass', icon: '🗣️' },
     ];
-
     return (
         <div className="max-w-5xl mx-auto p-4 space-y-8 animate-in fade-in duration-700 pb-20">
             <div className="text-center space-y-3">
@@ -125,7 +109,6 @@ const Translator = () => {
                     Switch seamlessly between text and voice modes. All translations are performed locally for maximum privacy.
                 </p>
             </div>
-
             <div className="flex flex-wrap justify-center gap-3">
                 {modes.map((m) => (
                     <button
@@ -141,7 +124,6 @@ const Translator = () => {
                     </button>
                 ))}
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-[1fr,auto,1fr] items-center gap-4 px-4">
                 <select value={srcLang} onChange={(e) => setSrcLang(e.target.value)}
                     className="p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer">
@@ -153,7 +135,6 @@ const Translator = () => {
                     {languages.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
                 </select>
             </div>
-
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="space-y-4">
                     <div className="relative group">
@@ -164,7 +145,6 @@ const Translator = () => {
                             className={`w-full h-80 p-8 bg-white dark:bg-slate-800 rounded-[32px] shadow-2xl border border-slate-100 dark:border-slate-700 outline-none focus:ring-4 focus:ring-blue-500/10 transition-all resize-none text-lg leading-relaxed placeholder:text-slate-300 dark:placeholder:text-slate-600
                                 ${isRecording ? 'animate-pulse ring-4 ring-red-500/20 border-red-500/30' : ''}`}
                         />
-                        
                         {(mode === 'speech-to-text' || mode === 'speech-to-speech') && (
                             <button
                                 onClick={toggleRecording}
@@ -175,7 +155,6 @@ const Translator = () => {
                             </button>
                         )}
                     </div>
-
                     <button
                         onClick={handleTranslate}
                         disabled={isLoading || !inputText.trim()}
@@ -194,7 +173,6 @@ const Translator = () => {
                         )}
                     </button>
                 </div>
-
                 <div className="space-y-4">
                     <div className="relative h-80 p-8 bg-slate-900/5 dark:bg-white/5 rounded-[32px] border-2 border-dashed border-slate-200 dark:border-slate-800 flex flex-col overflow-auto backdrop-blur-sm">
                         {isLoading && progress && (
@@ -207,14 +185,12 @@ const Translator = () => {
                                 <p className="text-[10px] text-slate-400 mt-2 font-mono">Loading: {progress.file}</p>
                             </div>
                         )}
-
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Result Console</h3>
                             {outputText && (
                                 <button onClick={() => speak(outputText, tgtLang)} className="p-2 hover:bg-white dark:hover:bg-slate-800 rounded-lg transition-colors">🔊</button>
                             )}
                         </div>
-
                         {outputText ? (
                             <p className="text-xl leading-relaxed font-medium animate-in slide-in-from-bottom-4">
                                 {outputText}
@@ -226,7 +202,6 @@ const Translator = () => {
                             </div>
                         )}
                     </div>
-
                     <div className="p-6 bg-gradient-to-br from-indigo-500/10 to-blue-500/10 border border-blue-500/10 rounded-[24px] flex items-start gap-4 shadow-inner">
                         <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center text-2xl shadow-lg flex-shrink-0">🧞‍♂️</div>
                         <div>
@@ -241,5 +216,5 @@ const Translator = () => {
         </div>
     );
 };
-
 export default Translator;
+

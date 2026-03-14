@@ -84,17 +84,17 @@ const SituationalAI = () => {
     };
 
     return (
-        <div className="max-w-7xl mx-auto h-[calc(100vh-12rem)] flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-12 duration-1000 pb-20">
-            {/* Ultra-Premium Header */}
-            <div className="flex flex-col lg:flex-row items-center justify-between gap-8 bg-slate-900 text-white p-6 lg:p-10 rounded-[40px] lg:rounded-[60px] shadow-2xl relative overflow-hidden group border border-white/10">
-                <div className="absolute top-0 right-0 p-8 lg:p-12 opacity-10 text-[120px] lg:text-[180px] pointer-events-none group-hover:scale-110 transition-transform duration-[4000ms]">🤖</div>
-                <div className="relative z-10 flex items-center gap-6 lg:gap-10">
-                    <div className="w-16 h-16 lg:w-24 lg:h-24 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-2xl lg:rounded-[35px] flex items-center justify-center text-3xl lg:text-5xl shadow-[0_20px_50px_rgba(37,99,235,0.4)] animate-pulse">
+        <div className="max-w-7xl mx-auto flex flex-col gap-4 lg:gap-6 animate-in fade-in slide-in-from-bottom-8 duration-1000 pb-10">
+            {/* Ultra-Premium Header - Now much more compact */}
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-slate-900 text-white p-4 lg:p-6 rounded-[30px] lg:rounded-[40px] shadow-2xl relative overflow-hidden group border border-white/10">
+                <div className="absolute top-0 right-0 p-4 lg:p-8 opacity-10 text-[80px] lg:text-[120px] pointer-events-none group-hover:scale-110 transition-transform duration-[4000ms]">🤖</div>
+                <div className="relative z-10 flex items-center gap-4 lg:gap-6">
+                    <div className="w-12 h-12 lg:w-16 lg:h-16 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-xl lg:rounded-2xl flex items-center justify-center text-2xl lg:text-3xl shadow-lg animate-pulse">
                         🎛️
                     </div>
                     <div>
-                        <h1 className="text-3xl lg:text-5xl font-black tracking-tight leading-tight">Cultural <span className="text-blue-500">Concierge</span></h1>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.4em] flex items-center gap-3 mt-2 lg:mt-3">
+                        <h1 className="text-2xl lg:text-3xl font-black tracking-tight leading-tight">Cultural <span className="text-blue-500">Concierge</span></h1>
+                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.3em] flex items-center gap-2 mt-1">
                             <span className="relative flex h-2 w-2">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                                 <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
@@ -103,21 +103,21 @@ const SituationalAI = () => {
                         </p>
                     </div>
                 </div>
-                <div className="flex flex-col gap-2 bg-white/5 p-4 lg:p-6 rounded-[25px] lg:rounded-[30px] border border-white/10 backdrop-blur-md min-w-[240px] lg:min-w-[280px]">
-                    <span className="text-[9px] lg:text-[10px] font-black px-3 text-slate-400 uppercase tracking-widest">Select Target Geography</span>
+                <div className="flex flex-col gap-1 bg-white/5 p-3 lg:p-4 rounded-2xl border border-white/10 backdrop-blur-md min-w-[200px]">
+                    <span className="text-[8px] lg:text-[9px] font-black px-2 text-slate-400 uppercase tracking-widest">Target Geography</span>
                     <select 
                         value={country} 
                         onChange={(e) => setCountry(e.target.value)}
-                        className="bg-transparent text-lg lg:text-xl font-black p-1 lg:p-2 rounded-xl outline-none cursor-pointer hover:text-blue-400 transition-colors"
+                        className="bg-transparent text-sm lg:text-lg font-black p-1 rounded-lg outline-none cursor-pointer hover:text-blue-400 transition-colors"
                     >
                         {countries.map(c => <option key={c} value={c} className="text-black">{c}</option>)}
                     </select>
                 </div>
             </div>
 
-            <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr,380px] gap-8 overflow-hidden">
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr,320px] gap-6 lg:gap-8 min-h-[500px]">
                 {/* Chat Window */}
-                <div className="flex flex-col bg-white dark:bg-slate-900 rounded-[60px] shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden relative">
+                <div className="flex flex-col bg-white dark:bg-slate-900 rounded-[30px] lg:rounded-[40px] shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden relative min-h-[450px]">
                     <div className="flex-1 overflow-y-auto p-10 custom-scrollbar space-y-8">
                         {messages.map((msg) => (
                             <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-4 duration-500`}>

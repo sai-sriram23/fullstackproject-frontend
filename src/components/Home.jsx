@@ -39,16 +39,10 @@ const Home = () => {
                     to="/learn"
                 />
                 <FeatureCard
-                    title="Cultural Concierge"
-                    desc="Native strategy & situational help for social/business life abroad."
+                    title="AI Assistant"
+                    desc="Local LLM-powered helper for any scenario or question."
                     icon="🤖"
-                    to="/chatbot"
-                />
-                <FeatureCard
-                    title="Social Decoder"
-                    desc="Deep cultural subtext analysis for messages and interactions."
-                    icon="🧬"
-                    to="/decoder"
+                    to="/assistant"
                 />
             </div>
             <Link to="/translator" className="mt-12 px-8 py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-xl shadow-blue-500/20 hover:scale-105 transition-all active:scale-95">

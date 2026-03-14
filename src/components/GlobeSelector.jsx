@@ -153,24 +153,36 @@ const GlobeSelector = ({ onSelectLanguage, currentLanguage }) => {
         <h2 className="text-3xl font-black text-white tracking-tighter">Regional Selector</h2>
       </div>
 
-      <Globe
-        ref={globeEl}
-        globeImageUrl="//unpkg.com/three-globe/example/img/earth-night.jpg"
-        backgroundImageUrl="//unpkg.com/three-globe/example/img/night-sky.png"
-        polygonsData={countries.features}
-        polygonAltitude={d => d === hoverD ? 0.06 : 0.01}
-        polygonCapColor={d => d === hoverD ? 'rgba(59, 130, 246, 0.6)' : 'rgba(59, 130, 246, 0.15)'}
-        polygonSideColor={() => 'rgba(0, 0, 0, 0.2)'}
-        polygonStrokeColor={() => '#111'}
-        onPolygonHover={setHoverD}
-        onPolygonClick={({ properties: d }) => {
-          const data = countryLanguageMap[d.ISO_A3];
-          if (data) setSelectedCountry(data);
-          else setSelectedCountry({ name: d.NAME, languages: [{ id: 'en', name: 'English' }] });
-        }}
-        enablePointerInteraction={true}
-        animateIn={true}
-      />
+      <div className="absolute inset-0 flex items-center justify-center">
+        <Globe
+          ref={globeEl}
+          width={window.innerWidth < 768 ? 400 : 800}
+          height={650}
+          globeImageUrl="https://unpkg.com/three-globe/example/img/earth-night.jpg"
+          backgroundImageUrl="https://unpkg.com/three-globe/example/img/night-sky.png"
+          polygonsData={countries.features}
+          polygonAltitude={d => d === hoverD ? 0.06 : 0.01}
+          polygonCapColor={d => d === hoverD ? 'rgba(59, 130, 246, 0.6)' : 'rgba(59, 130, 246, 0.15)'}
+          polygonSideColor={() => 'rgba(0, 0, 0, 0.2)'}
+          polygonStrokeColor={() => '#111'}
+          onPolygonHover={setHoverD}
+          onPolygonClick={({ properties: d }) => {
+            const data = countryLanguageMap[d.ISO_A3];
+            if (data) setSelectedCountry(data);
+            else setSelectedCountry({ name: d.NAME, languages: [{ id: 'en', name: 'English' }] });
+          }}
+          enablePointerInteraction={true}
+          animateIn={true}
+          onGlobeReady={() => {
+            if (globeEl.current) {
+              const controls = globeEl.current.controls();
+              controls.autoRotate = true;
+              controls.autoRotateSpeed = 0.5;
+              controls.enableZoom = false;
+            }
+          }}
+        />
+      </div>
 
       {selectedCountry && (
         <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md z-30 flex items-center justify-center p-6 animate-in fade-in duration-300">

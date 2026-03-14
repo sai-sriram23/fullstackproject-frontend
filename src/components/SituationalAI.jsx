@@ -9,6 +9,14 @@ const SituationalAI = () => {
     const [typingState, setTypingState] = useState('');
     const scrollRef = useRef(null);
 
+    const [customScenario, setCustomScenario] = useState('');
+
+    const countries = [
+        "France", "Japan", "Germany", "Spain", "China", "Mexico", 
+        "India", "South Korea", "UK", "USA", "UAE", "Italy", 
+        "Brazil", "Thailand", "Vietnam", "Turkey", "Canada", "Australia"
+    ].sort();
+
     useEffect(() => {
         const init = ChatService.getInitialMessage(country);
         setMessages([init]);
@@ -56,8 +64,6 @@ const SituationalAI = () => {
         { label: "Asking for directions", icon: "🗺️" },
         { label: "Handle a polite refusal", icon: "✋" }
     ];
-
-    const countries = ["France", "Japan", "Germany", "Spain", "China", "Mexico", "Italy", "UK", "USA", "UAE"];
 
     const formatAIRestponse = (text) => {
         if (!text) return null;
@@ -108,9 +114,9 @@ const SituationalAI = () => {
                     <select 
                         value={country} 
                         onChange={(e) => setCountry(e.target.value)}
-                        className="bg-transparent text-sm lg:text-lg font-black p-1 rounded-lg outline-none cursor-pointer hover:text-blue-400 transition-colors"
+                        className="bg-transparent text-sm lg:text-lg font-black p-1 rounded-lg outline-none cursor-pointer hover:text-blue-400 transition-colors w-full"
                     >
-                        {countries.map(c => <option key={c} value={c} className="text-black">{c}</option>)}
+                        {countries.sort().map(c => <option key={c} value={c} className="text-black">{c}</option>)}
                     </select>
                 </div>
             </div>
@@ -191,6 +197,24 @@ const SituationalAI = () => {
                                     <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-10 dark:text-white text-6xl pointer-events-none transform translate-x-3 duration-500">✦</div>
                                 </button>
                             ))}
+                        </div>
+
+                        {/* Custom Scenario Section */}
+                        <div className="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800 space-y-4">
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Custom Scenario</h3>
+                            <textarea 
+                                value={customScenario}
+                                onChange={(e) => setCustomScenario(e.target.value)}
+                                placeholder="Describe a specific situation (e.g. 'Asking for a raise in Tokyo'...)"
+                                className="w-full h-32 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 text-xs outline-none focus:ring-4 focus:ring-blue-500/10 transition-all resize-none shadow-inner"
+                            />
+                            <button 
+                                onClick={() => { if(customScenario.trim()) { handleSend(customScenario); setCustomScenario(''); }}}
+                                disabled={!customScenario.trim()}
+                                className="w-full py-4 bg-slate-900 dark:bg-slate-800 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-colors disabled:opacity-30"
+                            >
+                                Analyze Custom Context
+                            </button>
                         </div>
                     </div>
 

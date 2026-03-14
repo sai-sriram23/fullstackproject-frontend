@@ -8,11 +8,13 @@ const SocialDecoder = () => {
     const [analysis, setAnalysis] = useState(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [history, setHistory] = useState([]);
+    const [customGoal, setCustomGoal] = useState('');
 
     const handleAnalyze = async () => {
         setIsAnalyzing(true);
         try {
-            const result = await SentimentEngine.analyze(input, country, goal);
+            const finalGoal = goal === "OTHER: User Defined Goal" ? customGoal : goal;
+            const result = await SentimentEngine.analyze(input, country, finalGoal);
             const completeAnalysis = { ...result, timestamp: new Date() };
             setAnalysis(completeAnalysis);
             setHistory(prev => [completeAnalysis, ...prev.slice(0, 4)]);
@@ -30,7 +32,8 @@ const SocialDecoder = () => {
         "Incorporate local humour",
         "Navigate a tricky refusal",
         "Evaluate romantic interest",
-        "Scan for hidden sarcasm"
+        "Scan for hidden sarcasm",
+        "OTHER: User Defined Goal"
     ];
 
     return (
@@ -73,13 +76,11 @@ const SocialDecoder = () => {
                                         onChange={(e) => setCountry(e.target.value)}
                                         className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 font-bold text-xs outline-none focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer shadow-sm hover:bg-white dark:hover:bg-slate-750"
                                     >
-                                        <option>France</option>
-                                        <option>Japan</option>
-                                        <option>Germany</option>
-                                        <option>UK</option>
-                                        <option>Spain</option>
-                                        <option>Italy</option>
-                                        <option>Mexico</option>
+                                        {[
+                                            "France", "Japan", "Germany", "Spain", "China", "Mexico", 
+                                            "India", "South Korea", "UK", "USA", "UAE", "Italy", 
+                                            "Brazil", "Thailand", "Vietnam", "Turkey", "Canada", "Australia"
+                                        ].sort().map(c => <option key={c}>{c}</option>)}
                                     </select>
                                 </div>
                                 <div className="space-y-2">
@@ -102,9 +103,23 @@ const SocialDecoder = () => {
                                     className="w-full h-40 p-6 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-4 focus:ring-blue-500/10 transition-all font-medium text-sm leading-relaxed shadow-inner resize-none"
                                 />
                             </div>
+
+                            {goal === "OTHER: User Defined Goal" && (
+                                <div className="space-y-2 animate-in slide-in-from-top-4 duration-500">
+                                    <label className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 ml-4">Specify Your Custom Goal</label>
+                                    <input 
+                                        type="text" 
+                                        value={customGoal}
+                                        onChange={(e) => setCustomGoal(e.target.value)}
+                                        placeholder="e.g. 'Asking for a discount without being rude'..."
+                                        className="w-full p-4 bg-white dark:bg-slate-800 rounded-2xl border border-blue-500/30 font-bold text-xs outline-none focus:ring-4 focus:ring-blue-500/20 transition-all shadow-sm"
+                                    />
+                                </div>
+                            )}
+
                             <button 
                                 onClick={handleAnalyze}
-                                disabled={isAnalyzing || !input.trim()}
+                                disabled={isAnalyzing || !input.trim() || (goal === "OTHER: User Defined Goal" && !customGoal.trim())}
                                 className="w-full py-6 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-2xl font-black text-xl shadow-[0_20px_40px_rgba(37,99,235,0.2)] hover:scale-[1.01] active:scale-95 transition-all flex items-center justify-center gap-4 disabled:opacity-50 overflow-hidden relative group"
                             >
                                 <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />

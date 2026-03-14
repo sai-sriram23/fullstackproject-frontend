@@ -2,8 +2,13 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { getHistory } from '../services/api';
 const timeAgo = (dateStr) => {
     if (!dateStr) return '';
-    // Handle both 'timestamp' (standard) and 'createdAt' (legacy/alt)
-    const date = new Date(dateStr);
+    let date;
+    if (Array.isArray(dateStr)) {
+        // Spring Boot LocalDateTime array format [Y, M, D, H, M, S]
+        date = new Date(dateStr[0], dateStr[1] - 1, dateStr[2], dateStr[3] || 0, dateStr[4] || 0, dateStr[5] || 0);
+    } else {
+        date = new Date(dateStr);
+    }
     if (isNaN(date.getTime())) return '';
     const diff = Date.now() - date.getTime();
     const mins = Math.floor(diff / 60000);
@@ -24,6 +29,7 @@ const typeIcon = {
     CAMERA: '📸',
     CAMERA_TRANSLATE: '📸',
     ASSISTANT: '🤖',
+    LEARN: '🎓',
 };
 const ProfileCard = ({ username }) => {
     const joined = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
@@ -238,7 +244,7 @@ const Dashboard = () => {
     useEffect(() => {
         // Now loading history for 'Guest' too so users see results immediately
         getHistory(username)
-            .then((data) => setHistory(Array.isArray(data) ? data.reverse() : []))
+            .then((data) => setHistory(Array.isArray(data) ? data : []))
             .catch(() => setHistory([]))
             .finally(() => setHistoryLoading(false));
     }, [username]);

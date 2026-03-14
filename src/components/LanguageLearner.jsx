@@ -3,6 +3,7 @@ import { languages } from '../constants/languages';
 import { TOPICS, DAILY_THEMES, XP_PER_CORRECT, XP_PER_LESSON_COMPLETE, DIFFICULTY_LEVELS } from '../constants/lessonData';
 import scenarioEngine from '../services/ScenarioEngine';
 import phoneticEngine, { getPhoneticHint, getDifferenceHeatmap } from '../services/PhoneticEngine';
+import { saveHistory } from '../services/api';
 import GlobeSelector from './GlobeSelector';
 import MascotImg from '../assets/neura_mascot.png';
 
@@ -306,6 +307,15 @@ const LanguageLearner = () => {
             setFeedback({ correct: true, expected: correct });
             setShowCelebration(true);
             setTimeout(() => setShowCelebration(false), 1200);
+
+            // Save to global history when they successfully translate something while learning
+            const username = localStorage.getItem('username') || 'Guest';
+            saveHistory({
+                username,
+                type: 'LEARN',
+                sourceText: item.word,
+                resultText: correct
+            }).catch(() => { });
         } else {
             setHearts(prev => Math.max(0, prev - 1));
             setFeedback({ correct: false, expected: correct });

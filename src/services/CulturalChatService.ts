@@ -13,9 +13,11 @@ export interface ChatMessage {
 class CulturalChatService {
     async getResponse(userInput: string, country: string): Promise<ChatMessage> {
         try {
+            const provider = localStorage.getItem('ai_provider') || 'poe';
             const response = await axios.post(`${API_URL}/api/ai/chat`, {
                 input: userInput,
-                country: country
+                country: country,
+                provider: provider
             });
 
             return {

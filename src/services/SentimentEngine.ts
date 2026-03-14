@@ -13,10 +13,12 @@ export interface SentimentAnalysis {
 class SentimentEngine {
     async analyze(text: string, country: string, goal: string): Promise<SentimentAnalysis> {
         try {
+            const provider = localStorage.getItem('ai_provider') || 'poe';
             const response = await axios.post(`${API_URL}/api/ai/decode`, {
                 text: text,
                 country: country,
-                goal: goal
+                goal: goal,
+                provider: provider
             });
 
             const raw = response.data.rawResponse;

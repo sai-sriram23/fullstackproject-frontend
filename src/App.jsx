@@ -10,6 +10,8 @@ import LanguageLearner from './components/LanguageLearner';
 import Home from './components/Home';
 import Layout from './components/Layout';
 import MemoryGraph from './components/MemoryGraph';
+import SituationalAI from './components/SituationalAI';
+import SocialDecoder from './components/SocialDecoder';
 import { Analytics } from '@vercel/analytics/react';
 
 const App = () => {
@@ -31,6 +33,8 @@ const App = () => {
           <Route path="models" element={<Models />} />
           <Route path="learn" element={<LanguageLearner />} />
           <Route path="memory" element={<MemoryGraph />} />
+          <Route path="chatbot" element={<SituationalAI />} />
+          <Route path="decoder" element={<SocialDecoder />} />
         </Route>
       </Routes>
     </Router>

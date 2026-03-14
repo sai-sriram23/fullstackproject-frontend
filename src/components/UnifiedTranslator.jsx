@@ -120,10 +120,12 @@ const Translator = () => {
         setIsInsightLoading(true);
         try {
             const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8081';
+            const provider = localStorage.getItem('ai_provider') || 'poe';
             const resp = await axios.post(`${API_URL}/api/ai/translate-insight`, {
                 text: inputText,
                 translation: outputText,
-                targetLang: getLanguageName(tgtLang)
+                targetLang: getLanguageName(tgtLang),
+                provider: provider
             });
             setInsight(resp.data.insight);
         } catch (e) {

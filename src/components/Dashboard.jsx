@@ -2,7 +2,10 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { getHistory } from '../services/api';
 const timeAgo = (dateStr) => {
     if (!dateStr) return '';
-    const diff = Date.now() - new Date(dateStr).getTime();
+    // Handle both 'timestamp' (standard) and 'createdAt' (legacy/alt)
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return '';
+    const diff = Date.now() - date.getTime();
     const mins = Math.floor(diff / 60000);
     if (mins < 1) return 'just now';
     if (mins < 60) return `${mins}m ago`;
@@ -12,9 +15,15 @@ const timeAgo = (dateStr) => {
 };
 const typeIcon = {
     TRANSLATE: '🌐',
+    TEXT_TO_TEXT: '📝',
+    TEXT_TO_SPEECH: '🔊',
+    SPEECH_TO_TEXT: '🎙️',
+    SPEECH_TO_SPEECH: '🗣️',
     OCR: '📄',
     VOICE: '🎙️',
     CAMERA: '📸',
+    CAMERA_TRANSLATE: '📸',
+    ASSISTANT: '🤖',
 };
 const ProfileCard = ({ username }) => {
     const joined = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
@@ -78,29 +87,36 @@ const RecentTranslations = ({ entries, loading }) => (
                     <p className="text-xs mt-1">Start translating to see your activity here</p>
                 </div>
             ) : (
-                entries.slice(0, 8).map((entry, i) => (
-                    <div key={entry.id ?? i}
-                        className="px-6 py-4 flex items-start gap-4 hover:bg-slate-50 dark:hover:bg-white/3 transition-colors group">
-                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-lg flex-shrink-0 group-hover:scale-110 transition-transform">
-                            {typeIcon[entry.type] ?? '💬'}
+                entries.slice(0, 8).map((entry, i) => {
+                    const displayType = entry.type?.replace(/_/g, ' ') || 'TRANSLATE';
+                    const isOcr = entry.type === 'OCR';
+                    const isCamera = entry.type?.includes('CAMERA');
+                    const isAssistant = entry.type === 'ASSISTANT';
+                    return (
+                        <div key={entry.id ?? i}
+                            className="px-6 py-4 flex items-start gap-4 hover:bg-slate-50 dark:hover:bg-white/3 transition-colors group">
+                            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-lg flex-shrink-0 group-hover:scale-110 transition-transform">
+                                {typeIcon[entry.type] ?? '💬'}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold truncate dark:text-slate-200">{entry.sourceText || '—'}</p>
+                                <p className="text-xs text-slate-400 truncate mt-0.5">{entry.resultText || '—'}</p>
+                            </div>
+                            <div className="flex-shrink-0 text-right">
+                                <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full
+                                    ${isOcr ? 'bg-emerald-500/10 text-emerald-500'
+                                        : isCamera ? 'bg-indigo-500/10 text-indigo-500'
+                                            : isAssistant ? 'bg-purple-500/10 text-purple-500'
+                                                : 'bg-blue-500/10 text-blue-500'}`}>
+                                    {displayType}
+                                </span>
+                                {(entry.timestamp || entry.createdAt) && (
+                                    <p className="text-[10px] font-bold text-slate-400 mt-1">{timeAgo(entry.timestamp || entry.createdAt)}</p>
+                                )}
+                            </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold truncate dark:text-slate-200">{entry.sourceText || '—'}</p>
-                            <p className="text-xs text-slate-400 truncate mt-0.5">{entry.resultText || '—'}</p>
-                        </div>
-                        <div className="flex-shrink-0 text-right">
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full
-                                ${entry.type === 'TRANSLATE' ? 'bg-blue-500/10 text-blue-500'
-                                    : entry.type === 'OCR' ? 'bg-emerald-500/10 text-emerald-500'
-                                        : 'bg-purple-500/10 text-purple-500'}`}>
-                                {entry.type}
-                            </span>
-                            {entry.createdAt && (
-                                <p className="text-[10px] text-slate-400 mt-1">{timeAgo(entry.createdAt)}</p>
-                            )}
-                        </div>
-                    </div>
-                ))
+                    );
+                })
             )}
         </div>
     </div>
@@ -220,7 +236,7 @@ const Dashboard = () => {
     const [history, setHistory] = useState([]);
     const [historyLoading, setHistoryLoading] = useState(true);
     useEffect(() => {
-        if (username === 'Guest') { setHistoryLoading(false); return; }
+        // Now loading history for 'Guest' too so users see results immediately
         getHistory(username)
             .then((data) => setHistory(Array.isArray(data) ? data.reverse() : []))
             .catch(() => setHistory([]))

@@ -1,17 +1,34 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
+import { saveHistory } from '../services/api';
 
 const AIAssistant = () => {
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: 'Greetings! I am your AI Assistant. I can help you with any scenario, from local customs and translations to coding and general advice. I prioritize local Ollama for speed, but I can also use Poe if needed. What is on your mind?' }
+    { role: 'assistant', content: 'Greetings! I am your AI Assistant. I can help you with any scenario. I prioritize local Ollama for speed, but I can also use Poe if needed. What is on your mind?' }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [activeProvider, setActiveProvider] = useState('Auto');
+  const [activeProvider, setActiveProvider] = useState('Initializing...');
   const [selectedProvider, setSelectedProvider] = useState('auto'); // 'auto', 'ollama', 'poe'
+  const [localModel, setLocalModel] = useState('mistral');
   const scrollRef = useRef(null);
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8081';
+
+  // Fetch config from backend on mount
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/api/ai/config`);
+        if (res.data.ollamaModel) setLocalModel(res.data.ollamaModel);
+        setActiveProvider('Ready');
+      } catch (err) {
+        console.error("Failed to fetch AI config", err);
+        setActiveProvider('Limited Mode');
+      }
+    };
+    fetchConfig();
+  }, [API_URL]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -33,27 +50,39 @@ const AIAssistant = () => {
 
       // Try Ollama if auto or specifically selected
       if (selectedProvider === 'auto' || selectedProvider === 'ollama') {
+        usedProvider = 'Ollama (Local)';
         try {
-          const ollamaResponse = await axios.post('http://localhost:11434/api/generate', {
-            model: 'llama3', 
-            prompt: `You are a helpful AI assistant. Help the user with this scenario: ${input}`,
+          // PROXY through backend to avoid Browser CORS issues
+          const ollamaResponse = await axios.post(`${API_URL}/api/ai/ollama-proxy`, {
+            model: localModel, 
+            messages: [{ role: 'user', content: input }],
             stream: false,
-          }, { timeout: 3000 });
+          }, { timeout: 10000 });
 
-          if (ollamaResponse.data && ollamaResponse.data.response) {
-            responseData = ollamaResponse.data.response;
-            usedProvider = 'Ollama (Local)';
+          // Ollama via proxy returns a string that needs parsing if it's raw JSON
+          let data = ollamaResponse.data;
+          if (typeof data === 'string') {
+              try { data = JSON.parse(data); } catch(e) {}
+          }
+
+          if (data && data.message && data.message.content) {
+            responseData = data.message.content;
+          } else if (data && data.response) {
+            responseData = data.response;
+          } else if (data && data.error) {
+              throw new Error(data.error);
           }
         } catch (err) {
-          console.warn("Ollama unavailable");
+          console.warn("Ollama proxy attempt failed:", err.message);
           if (selectedProvider === 'ollama') {
-            throw new Error("Ollama is not responding. Ensure it is running at http://localhost:11434");
+            throw new Error(`Ollama Proxy Failure: ${err.message}. Ensure Ollama is running at the server's localhost.`);
           }
         }
       }
 
       // Try Poe (via Backend) if still no response and auto or specifically selected
       if (!responseData && (selectedProvider === 'auto' || selectedProvider === 'poe')) {
+        usedProvider = 'Poe API';
         const backendResponse = await axios.post(`${API_URL}/api/ai/assistant`, {
           input: input,
           provider: 'poe'
@@ -61,9 +90,10 @@ const AIAssistant = () => {
 
         if (backendResponse.data && backendResponse.data.response) {
           responseData = backendResponse.data.response;
-          usedProvider = 'Poe API';
-        } else if (backendResponse.data && backendResponse.data.error) {
-            throw new Error(backendResponse.data.error);
+          // Check if it's an error message string from backend
+          if (responseData.includes("Failure") || responseData.includes("Error")) {
+              throw new Error(responseData);
+          }
         } else {
             throw new Error("Poe API returned an empty or invalid response.");
         }
@@ -72,8 +102,17 @@ const AIAssistant = () => {
       if (responseData) {
         setActiveProvider(usedProvider);
         setMessages(prev => [...prev, { role: 'assistant', content: responseData }]);
+        
+        // Save to global history
+        const username = localStorage.getItem('username') || 'Guest';
+        saveHistory({
+          username,
+          type: 'ASSISTANT',
+          sourceText: input,
+          resultText: responseData.length > 50 ? responseData.substring(0, 50) + '...' : responseData
+        }).catch(() => {});
       } else {
-        throw new Error("All AI systems failed to respond.");
+        throw new Error("All AI systems (Local & Cloud) failed to respond.");
       }
 
     } catch (error) {
@@ -81,7 +120,7 @@ const AIAssistant = () => {
       setActiveProvider('Offline');
       setMessages(prev => [...prev, { 
         role: 'assistant', 
-        content: `System Error: ${error.message} (Try switching providers if one is unavailable.)` 
+        content: `System Warning: ${error.message}\n\nTroubleshooting:\n1. Ensure Backend (8081) is running.\n2. Ensure Ollama is running locally.\n3. Check Poe API Key in application.properties.` 
       }]);
     } finally {
       setIsLoading(false);
@@ -92,21 +131,20 @@ const AIAssistant = () => {
     <div className="flex flex-col h-[calc(100vh-140px)] max-w-5xl mx-auto bg-white/80 dark:bg-gray-900/80 backdrop-blur-2xl rounded-[40px] shadow-2xl overflow-hidden border border-white/20 dark:border-gray-800 animate-in fade-in zoom-in duration-500">
       {/* Premium Header */}
       <div className="bg-gradient-to-br from-indigo-600 via-blue-600 to-cyan-500 p-8 text-white relative overflow-hidden">
-        {/* Decorative elements */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 blur-3xl rounded-full -mr-20 -mt-20"></div>
         <div className="absolute bottom-0 left-0 w-32 h-32 bg-cyan-400/20 blur-2xl rounded-full -ml-10 -mb-10"></div>
         
-        <div className="relative z-10 flex items-center justify-between">
+        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-6">
-            <div className="w-16 h-16 bg-white/20 rounded-3xl flex items-center justify-center text-3xl backdrop-blur-xl border border-white/30 shadow-2xl animate-pulse">
+            <div className="w-16 h-16 bg-white/20 rounded-3xl flex items-center justify-center text-3xl backdrop-blur-xl border border-white/30 shadow-2xl">
               🤖
             </div>
             <div>
               <h1 className="text-3xl font-black tracking-tighter uppercase italic">Neural Assistant</h1>
-              <div className="flex items-center gap-4 mt-2">
+              <div className="flex flex-wrap items-center gap-4 mt-2">
                 <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50"></span>
-                    <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Live: {activeProvider}</p>
+                    <span className={`w-2 h-2 rounded-full ${activeProvider.includes('Offline') ? 'bg-red-400' : 'bg-emerald-400'} shadow-lg`}></span>
+                    <p className="text-[10px] font-black uppercase tracking-widest opacity-80">{activeProvider}</p>
                 </div>
                 <div className="flex bg-black/20 p-1 rounded-xl backdrop-blur-md border border-white/10">
                     <button onClick={() => setSelectedProvider('auto')} className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase transition-all ${selectedProvider === 'auto' ? 'bg-white text-blue-600 shadow-lg' : 'text-white/60 hover:text-white'}`}>Auto</button>
@@ -116,14 +154,20 @@ const AIAssistant = () => {
               </div>
             </div>
           </div>
-          <div className="hidden md:block text-right">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">System Status</p>
-            <p className="text-lg font-black tracking-tighter">{isLoading ? 'PROCESSING NEURONS...' : 'WAITING FOR INPUT'}</p>
+          <div className="text-right flex flex-col items-center md:items-end gap-2">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Local Model</p>
+            <input 
+              type="text" 
+              value={localModel} 
+              onChange={(e) => setLocalModel(e.target.value)}
+              className="bg-black/20 border border-white/10 rounded-lg px-3 py-1 text-xs font-bold text-white outline-none focus:bg-white/10 w-32 md:w-auto text-center md:text-right"
+              placeholder="e.g. mistral"
+            />
           </div>
         </div>
       </div>
 
-      {/* Chat Area with custom scrollbar */}
+      {/* Chat Area */}
       <div 
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-8 space-y-8 bg-transparent custom-scrollbar"
@@ -143,9 +187,6 @@ const AIAssistant = () => {
                 {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </p>
             </div>
-            {m.role === 'user' && (
-                 <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs ml-3 mt-1 shadow-lg shrink-0">ME</div>
-            )}
           </div>
         ))}
         {isLoading && (
@@ -160,7 +201,7 @@ const AIAssistant = () => {
         )}
       </div>
 
-      {/* Modern Input Area */}
+      {/* Input Area */}
       <div className="p-8 bg-white/50 dark:bg-gray-900/50 backdrop-blur-xl border-t border-gray-100 dark:border-gray-800">
         <div className="relative max-w-4xl mx-auto">
           <input
@@ -168,7 +209,7 @@ const AIAssistant = () => {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="Describe any scenario (e.g. 'I am at a party in Paris and want to introduce myself')..."
+            placeholder="Type your message..."
             className="w-full p-6 pr-32 bg-white dark:bg-gray-800 rounded-[24px] border-2 border-slate-200 dark:border-gray-700 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-semibold text-gray-800 dark:text-gray-100 shadow-inner"
           />
           <button
@@ -178,11 +219,6 @@ const AIAssistant = () => {
           >
             {isLoading ? 'SYNCING' : 'SEND'}
           </button>
-        </div>
-        <div className="flex flex-wrap gap-4 justify-center mt-6">
-            <button onClick={() => setInput("Simulate a business meeting introduction in Tokyo")} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-500 transition-colors">Business Intro</button>
-            <button onClick={() => setInput("How to politely decline a drink in Germany?")} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-500 transition-colors">Social Customs</button>
-            <button onClick={() => setInput("Translate 'Help me find the station' to Spanish")} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-500 transition-colors">Travel Help</button>
         </div>
       </div>
     </div>

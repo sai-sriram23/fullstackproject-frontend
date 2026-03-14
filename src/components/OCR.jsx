@@ -47,7 +47,7 @@ const OCR = () => {
             setText(finalText);
             setRawText(cleanedText);
             setStatus('✅ Done');
-            const username = localStorage.getItem('username') || 'anonymous';
+            const username = localStorage.getItem('username') || 'Guest';
             saveHistory({
                 username,
                 type: 'OCR',

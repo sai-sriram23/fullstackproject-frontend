@@ -37,7 +37,7 @@ const CameraTranslator = () => {
                 setTransProgress(null);
                 setIsLoading(false);
                 setStatus('✅ Done');
-                const username = localStorage.getItem('username') || 'anonymous';
+                const username = localStorage.getItem('username') || 'Guest';
                 saveHistory({ username, type: 'CAMERA_TRANSLATE', sourceText: ocrRef.current, resultText: translated })
                     .catch(() => { });
             } else if (s === 'error') {

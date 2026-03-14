@@ -20,6 +20,11 @@ class SentimentEngine {
             });
 
             const raw = response.data.rawResponse;
+            
+            if (!raw || typeof raw !== 'string' || !raw.includes('{')) {
+                throw new Error(raw || "Neural cluster returned malformed data.");
+            }
+
             const parsed = JSON.parse(raw);
 
             return {
@@ -31,12 +36,13 @@ class SentimentEngine {
             };
         } catch (error: any) {
             console.error("AI Analysis Error:", error);
+            const errMsg = error.response?.data?.message || error.message || "Unknown Connection Fault";
             return {
                 tone: 'friendly',
                 politeness: 50,
-                subtext: "Neural Analysis failed. Please check your backend connection.",
+                subtext: "Neural Analysis failed. " + errMsg,
                 intensity: 'low',
-                recommendedResponses: ["Backend Error: " + error.message]
+                recommendedResponses: ["Strategy: Ensure your Poe API key is valid and backend is reachable.", "System Trace: " + (error.response?.status ? `HTTP ${error.response.status}` : errMsg)]
             };
         }
     }

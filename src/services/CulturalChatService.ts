@@ -24,11 +24,12 @@ class CulturalChatService {
                 sender: 'ai',
                 timestamp: new Date()
             };
-        } catch (error) {
+        } catch (error: any) {
             console.error("AI Error:", error);
+            const errMsg = error.response?.data?.message || error.message || "Connection Offline";
             return {
                 id: `err-${Date.now()}`,
-                text: "My neural sensors are currently offline. Please ensure the backend is connected and the API key is active.",
+                text: `My neural sensors are currently offline. Error: ${errMsg}. Please ensure the backend is connected and the POE API key is valid.`,
                 sender: 'ai',
                 timestamp: new Date()
             };

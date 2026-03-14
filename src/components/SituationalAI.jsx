@@ -86,29 +86,29 @@ const SituationalAI = () => {
     return (
         <div className="max-w-7xl mx-auto h-[calc(100vh-12rem)] flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-12 duration-1000 pb-20">
             {/* Ultra-Premium Header */}
-            <div className="flex flex-col lg:flex-row items-center justify-between gap-8 bg-slate-900 text-white p-10 rounded-[60px] shadow-2xl relative overflow-hidden group border border-white/10">
-                <div className="absolute top-0 right-0 p-12 opacity-10 text-[180px] pointer-events-none group-hover:scale-110 transition-transform duration-[4000ms]">🤖</div>
-                <div className="relative z-10 flex items-center gap-10">
-                    <div className="w-24 h-24 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-[35px] flex items-center justify-center text-5xl shadow-[0_20px_50px_rgba(37,99,235,0.4)] animate-pulse">
+            <div className="flex flex-col lg:flex-row items-center justify-between gap-8 bg-slate-900 text-white p-6 lg:p-10 rounded-[40px] lg:rounded-[60px] shadow-2xl relative overflow-hidden group border border-white/10">
+                <div className="absolute top-0 right-0 p-8 lg:p-12 opacity-10 text-[120px] lg:text-[180px] pointer-events-none group-hover:scale-110 transition-transform duration-[4000ms]">🤖</div>
+                <div className="relative z-10 flex items-center gap-6 lg:gap-10">
+                    <div className="w-16 h-16 lg:w-24 lg:h-24 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-2xl lg:rounded-[35px] flex items-center justify-center text-3xl lg:text-5xl shadow-[0_20px_50px_rgba(37,99,235,0.4)] animate-pulse">
                         🎛️
                     </div>
                     <div>
-                        <h1 className="text-5xl font-black tracking-tight leading-tight">Cultural <span className="text-blue-500">Concierge</span></h1>
-                        <p className="text-sm text-slate-400 font-bold uppercase tracking-[0.4em] flex items-center gap-3 mt-3">
-                            <span className="relative flex h-3 w-3">
+                        <h1 className="text-3xl lg:text-5xl font-black tracking-tight leading-tight">Cultural <span className="text-blue-500">Concierge</span></h1>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.4em] flex items-center gap-3 mt-2 lg:mt-3">
+                            <span className="relative flex h-2 w-2">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
                             </span>
                             Neural Native Protocols
                         </p>
                     </div>
                 </div>
-                <div className="flex flex-col gap-2 bg-white/5 p-6 rounded-[30px] border border-white/10 backdrop-blur-md min-w-[280px]">
-                    <span className="text-[10px] font-black px-3 text-slate-400 uppercase tracking-widest">Select Target Geography</span>
+                <div className="flex flex-col gap-2 bg-white/5 p-4 lg:p-6 rounded-[25px] lg:rounded-[30px] border border-white/10 backdrop-blur-md min-w-[240px] lg:min-w-[280px]">
+                    <span className="text-[9px] lg:text-[10px] font-black px-3 text-slate-400 uppercase tracking-widest">Select Target Geography</span>
                     <select 
                         value={country} 
                         onChange={(e) => setCountry(e.target.value)}
-                        className="bg-transparent text-xl font-black p-2 rounded-xl outline-none cursor-pointer hover:text-blue-400 transition-colors"
+                        className="bg-transparent text-lg lg:text-xl font-black p-1 lg:p-2 rounded-xl outline-none cursor-pointer hover:text-blue-400 transition-colors"
                     >
                         {countries.map(c => <option key={c} value={c} className="text-black">{c}</option>)}
                     </select>

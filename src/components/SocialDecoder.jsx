@@ -36,25 +36,24 @@ const SocialDecoder = () => {
     return (
         <div className="max-w-7xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-16 duration-1000 pb-20">
             {/* Neural Matrix Header */}
-            <div className="relative overflow-hidden p-12 bg-slate-900 text-white rounded-[70px] border border-white/5 shadow-2xl group min-h-[400px] flex items-center">
-                <div className="absolute top-0 right-0 p-16 opacity-5 text-[280px] pointer-events-none group-hover:scale-110 transition-transform duration-[6000ms] text-blue-500">🧬</div>
+            <div className="relative overflow-hidden p-8 lg:p-12 bg-slate-900 text-white rounded-[40px] lg:rounded-[70px] border border-white/5 shadow-2xl group min-h-[200px] lg:min-h-[300px] flex items-center">
+                <div className="absolute top-0 right-0 p-8 lg:p-16 opacity-5 text-[150px] lg:text-[280px] pointer-events-none group-hover:scale-110 transition-transform duration-[6000ms] text-blue-500">🧬</div>
                 <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-blue-600/10 to-transparent pointer-events-none" />
-                <div className="relative z-10 flex flex-col md:flex-row items-center gap-16">
-                    <div className="w-56 h-56 bg-slate-800 rounded-[55px] border border-white/5 flex items-center justify-center text-8xl shadow-[0_40px_80px_rgba(0,0,0,0.5)] relative overflow-hidden group/icon">
+                <div className="relative z-10 flex flex-col md:flex-row items-center gap-8 lg:gap-16">
+                    <div className="w-32 h-32 lg:w-48 lg:h-48 bg-slate-800 rounded-[35px] lg:rounded-[55px] border border-white/5 flex items-center justify-center text-5xl lg:text-7xl shadow-[0_40px_80px_rgba(0,0,0,0.5)] relative overflow-hidden group/icon">
                         <div className="absolute inset-0 bg-gradient-to-tr from-blue-600/20 to-indigo-600/20 animate-pulse" />
                         <span className="relative z-10 group-hover/icon:scale-110 transition-transform duration-700">🔬</span>
                     </div>
-                    <div className="flex-1 text-center md:text-left space-y-6">
-                        <div className="inline-flex items-center gap-4 px-6 py-3 bg-blue-500/10 text-blue-400 rounded-full text-xs font-black uppercase tracking-[0.4em] border border-blue-500/20 shadow-lg">
-                            <span className="w-3 h-3 bg-blue-500 rounded-full animate-ping"></span>
-                            Neural Social Decryption v5.0
+                    <div className="flex-1 text-center md:text-left space-y-4 lg:space-y-6">
+                        <div className="inline-flex items-center gap-3 px-4 py-2 lg:px-6 lg:py-3 bg-blue-500/10 text-blue-400 rounded-full text-[10px] font-black uppercase tracking-[0.4em] border border-blue-500/20 shadow-lg">
+                            <span className="w-2 h-2 bg-blue-500 rounded-full animate-ping"></span>
+                            Neural Decryption v5.0
                         </div>
-                        <h1 className="text-7xl font-black tracking-tight leading-none mb-6">
-                            Decode the <span className="bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent italic">Subtext</span>.
+                        <h1 className="text-4xl lg:text-6xl font-black tracking-tight leading-none mb-2">
+                            Decode <span className="bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent italic">Subtext</span>.
                         </h1>
-                        <p className="text-slate-400 max-w-2xl text-lg font-medium leading-relaxed opacity-80">
-                            Mistral-Logic enabled analysis. Paste any text to uncover the hidden cultural layers, 
-                            politeness intensity, and receive AI-optimized response strategies.
+                        <p className="text-slate-400 max-w-2xl text-sm lg:text-lg font-medium leading-relaxed opacity-80">
+                            Mistral-Logic enabled analysis. Paste any text to uncover hidden cultural layers.
                         </p>
                     </div>
                 </div>
